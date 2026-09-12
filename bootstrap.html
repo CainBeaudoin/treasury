@@ -10,14 +10,19 @@
   <div class="loading">Loading Chosen Treasury…</div>
   <script>
     (async function () {
-      const version = '20260912-3';
+      const version = '20260912-4';
       const response = await fetch('/index.html?base=' + version, { cache: 'no-store' });
       if (!response.ok) throw new Error('Could not load treasury base: ' + response.status);
       let html = await response.text();
       const policy = '<scr' + 'ipt src="/policy-overrides.js?v=' + version + '"></scr' + 'ipt>';
       const fixes = '<scr' + 'ipt src="/policy-fixes.js?v=' + version + '"></scr' + 'ipt>';
-      if (!html.includes('policy-overrides.js')) html = html.replace('</body>', policy + '\n' + fixes + '\n</body>');
-      else if (!html.includes('policy-fixes.js')) html = html.replace('</body>', fixes + '\n</body>');
+      const autoCredit = '<scr' + 'ipt src="/auto-credit-back-final.js?v=' + version + '"></scr' + 'ipt>';
+      if (!html.includes('policy-overrides.js')) {
+        html = html.replace('</body>', policy + '\n' + fixes + '\n' + autoCredit + '\n</body>');
+      } else {
+        if (!html.includes('policy-fixes.js')) html = html.replace('</body>', fixes + '\n</body>');
+        if (!html.includes('auto-credit-back-final.js')) html = html.replace('</body>', autoCredit + '\n</body>');
+      }
       document.open();
       document.write(html);
       document.close();
