@@ -214,10 +214,24 @@
 
   renderAll();
 
-  if (!document.querySelector('script[data-odto-inventory]')) {
+  function loadVisualHierarchy() {
+    if (document.querySelector('script[data-visual-hierarchy]')) return;
     const script = document.createElement('script');
-    script.src = './inventory-odto.js?v=20260912-9';
-    script.dataset.odtoInventory = '1';
+    script.src = './visual-hierarchy.js?v=20260912-10';
+    script.dataset.visualHierarchy = '1';
     document.body.appendChild(script);
+  }
+
+  const existingInventory = document.querySelector('script[data-odto-inventory]');
+  if (!existingInventory) {
+    const script = document.createElement('script');
+    script.src = './inventory-odto.js?v=20260912-10';
+    script.dataset.odtoInventory = '1';
+    script.addEventListener('load', loadVisualHierarchy, { once: true });
+    document.body.appendChild(script);
+  } else if (existingInventory.dataset.loaded === '1') {
+    loadVisualHierarchy();
+  } else {
+    existingInventory.addEventListener('load', loadVisualHierarchy, { once: true });
   }
 })();
