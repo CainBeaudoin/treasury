@@ -1,42 +1,41 @@
 # Chosen Treasury Demo
 
-Static Vercel-ready admin dashboard for Chosen treasury operations.
+A dependency-free static admin dashboard for Chosen's treasury.
 
-## Accounting model in this demo
+## Accounting model used in the demo
+
+USDC and Credits are deliberately separated in **Activity**.
 
 ### USDC activity
-USDC is treated as company cash flow and is kept in its own activity log:
 - **Crate Purchase** — USDC inflow.
-- **Cashback** — USDC outflow for eligible instant-sell/cashback settlement (demo rate: 80%).
-- **Shipping** — USDC collected for fulfillment; shown separately because it may be pass-through rather than profit.
-- **Marketplace Fee** — only the platform fee is company revenue. The marketplace sale principal is not counted as revenue (demo fee: 1%).
+- **Cashback** — USDC outflow when a USDC-funded crate is cashed out. Demo rate: 80%.
+- **Shipping** — USDC collected for fulfillment; tracked separately from operating revenue.
+- **Marketplace Fee** — only Chosen's fee is recorded as revenue. Demo rate: 1%.
 
 ### Credits activity
-Credits are an internal platform liability and have a separate activity log.
+- **Credit Spend** — Credits used to buy a crate.
+- **Credit Back** — Credits returned when a Credits-funded crate is cashed out. Demo rate: 80%. This is tracked separately from new emissions.
+- **Crate Bonus** — new Credits emitted at 5% of crate value on every crate, whether the crate was paid with USDC or Credits. Examples: $250 → 12.5 Credits; $1,000 → 50 Credits.
+- **Lulu Emission** — Credits created by Lulu burns.
+- **Promotional Run** — Credits granted through campaigns.
 
-New Credit emissions are separated by source:
-- **Credit Back** — 5 Credits per $100 of crate value (5%), emitted every time a crate is opened whether the crate was paid with USDC or Credits.
-- **Lulu Emission** — 100 Credits for one Lulu burn; 333 Credits for each complete group of three.
-- **Promotional Run** — targeted promotional Credit grants.
+This means **Cashback**, **Credit Back**, and **Crate Bonus** are three distinct treasury metrics.
 
-Credit spending and settlements can also appear in the Credits activity log, but are not counted as new issuance.
+## Lulu
+- 1 Lulu = 100 Credits
+- 3 Lulus = 333 Credits
+- Supply cap = 3,333
+- Maximum lifetime emission = 369,963 Credits
+- Remaining maximum = `floor(n / 3) * 333 + (n % 3) * 100`
 
-## Lulu cap
-3,333 Lulus produce a theoretical lifetime maximum of **369,963 Credits**:
-
-`floor(3333 / 3) × 333 + (3333 mod 3) × 100`
-
-For any remaining Lulu supply `n`:
-
-`floor(n / 3) × 333 + (n mod 3) × 100`
-
-Example: 5 remaining = 333 + 200 = 533 Credits.
+## Demo behavior
+- CSV export per section.
+- Filters for the activity and audit tables.
+- Simulated live activity every 15 seconds.
+- Compact Rules cards to avoid unnecessary vertical whitespace.
 
 ## Real-time integration
-The current project uses a lightweight demo event generator every 15 seconds. Replace that generator with your backend event stream (WebSocket/SSE) or API polling. Keep USDC events and Credit events as separate data models so reporting and reconciliation stay clean.
-
-## CSV exports
-Each section can export its currently filtered view. In Activity, the export follows the selected USDC or Credits sub-tab, making quarterly archives clean and separate.
+Replace the in-memory demo arrays in `app.js` with API responses and WebSocket/SSE events from the Chosen backend. Preserve separate event categories for `cashback`, `credit_back`, and `crate_bonus` so they cannot be combined in reporting.
 
 ## Deploy
-This is a static project and can be imported directly into Vercel with no build command.
+This repo is static and can be imported directly into Vercel with no build command.
