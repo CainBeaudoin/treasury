@@ -6,6 +6,37 @@
       .reduce((sum, item) => sum + pendingLiquidationAmount(item), 0);
   }
 
+  function ensureFinanceTabsVisible() {
+    const nav = document.querySelector('.tabs');
+    if (!nav) return;
+
+    const rulesTab = [...nav.querySelectorAll('.tab')].find(b => b.dataset.tab === 'rules');
+    const specs = [
+      ['poolRevenue', 'Pool Revenue'],
+      ['supplierPayouts', 'Supplier Payouts']
+    ];
+
+    specs.forEach(([panelId, label]) => {
+      if (!document.getElementById(panelId)) return;
+      let button = [...nav.querySelectorAll('.tab')].find(b => b.dataset.tab === panelId);
+      if (!button) {
+        button = document.createElement('button');
+        button.className = 'tab';
+        button.dataset.tab = panelId;
+        button.textContent = label;
+        nav.insertBefore(button, rulesTab || null);
+      }
+      if (!button.dataset.financeTabBound) {
+        button.dataset.financeTabBound = 'true';
+        button.addEventListener('click', () => {
+          document.querySelectorAll('.tab,.tab-panel').forEach(x => x.classList.remove('active'));
+          button.classList.add('active');
+          document.getElementById(panelId)?.classList.add('active');
+        });
+      }
+    });
+  }
+
   function syncRules() {
     const grid = document.querySelector('#rules .rules-grid');
     if (!grid) return;
@@ -78,6 +109,7 @@
       if (p) p.textContent = 'The user has 365 days to list, redeem, or liquidate. If they do nothing, the item disappears from the vault at day 365 and Auto Credit Back deposits the capped 70% amount into Credits.';
     }
 
+    ensureFinanceTabsVisible();
     syncRules();
   }
 
