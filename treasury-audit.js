@@ -1,6 +1,6 @@
 /* Final treasury QA and simplification layer. Runs after visual-hierarchy.js. */
 (function () {
-  const VERSION = 'treasury-audit-v1';
+  const VERSION = 'treasury-audit-v2';
   const CREDIT_OPENING_SUPPLY = 83573;
   const num = v => Number(v || 0);
   const textNumber = v => {
@@ -69,9 +69,9 @@
 
   function improveOverview(x){
     const grid=document.getElementById('overviewSummary'); if(!grid)return;
-    const profit=cardById('ovProfit'), support=cardById('ovPayouts');
+    const profit=cardById('ovProfit'), payouts=cardById('ovPayouts');
     setValue(profit,usd(x.safeWithdrawal)); relabel(profit,'Withdrawable profit',`Leaves ${usd(x.postWithdrawalCushion)} above obligations and reserves`);
-    setValue(support,usd(x.inventoryValue)); relabel(support,'Inventory value','Reusable + user-vault ODTO stock at acquisition cost'); setTone(support,'info');
+    setValue(payouts,usd(x.paidToOdto+x.stockOutflow)); relabel(payouts,'Cash payouts',`ODTO ${usd(x.paidToOdto)} · stocks ${usd(x.stockOutflow)} · inventory ${usd(x.inventoryValue)}`); setTone(payouts,'negative');
   }
 
   function improveRevenue(x){
@@ -109,11 +109,12 @@
   function compactCredits(x){
     const root=document.getElementById('creditsCoreView'); if(!root)return;
     const intro=root.querySelector('.section-intro p'); if(intro)intro.textContent='Crate-only, non-cash supply.';
-    root.querySelector(':scope>.metric-grid')?.classList.add('audit-hidden'); root.querySelector(':scope>.two-col')?.classList.add('audit-hidden'); root.querySelector(':scope>.subsection-head')?.classList.add('audit-hidden'); root.querySelector(':scope>.exposure-strip')?.classList.add('audit-hidden'); document.getElementById('pendingItemsTable')?.closest('.panel')?.classList.add('audit-hidden');
+    root.querySelector(':scope>.metric-grid')?.classList.add('audit-hidden'); root.querySelector(':scope>.two-col')?.classList.add('audit-hidden'); root.querySelector(':scope>.subsection-head')?.classList.add('audit-hidden'); root.querySelector(':scope>.exposure-strip')?.classList.add('audit-hidden');
     let box=document.getElementById('creditsExecutive'); if(!box){box=document.createElement('article');box.id='creditsExecutive';box.className='credits-executive';root.querySelector('.section-intro')?.insertAdjacentElement('afterend',box);}
     const sign=x.creditNet>=0?'+':'−';
     box.innerHTML=`<div class="credits-executive-main"><span>Credits in circulation</span><strong>${cr(x.creditSupply)}</strong><small>Non-cash units · crates only</small></div><div class="credits-executive-stat"><span>Net change</span><strong class="${x.creditNet>=0?'positive-text':'negative-text'}">${sign}${cr(Math.abs(x.creditNet))}</strong></div><div class="credits-executive-stat"><span>New emissions</span><strong>${cr(x.newEmissions)}</strong></div><div class="credits-executive-stat"><span>Auto Credit Back exposure</span><strong class="warning-text">${cr(x.autoCreditExposure)}</strong></div><div class="credits-executive-source"><b>Emission mix:</b> Lulu ${cr(x.luluEmission)} · Crate Bonus ${cr(x.crateBonus)} · Promotions ${cr(x.promotions)}</div>`;
     const panel=document.getElementById('creditsTable')?.closest('.panel'); if(panel&&!panel.querySelector('.panel-head')){const head=document.createElement('div');head.className='panel-head';head.innerHTML='<div><h3>Credits Activity</h3></div>';panel.insertBefore(head,panel.firstChild);}
+    const pending=document.getElementById('pendingItemsTable')?.closest('.panel'); if(pending){pending.classList.remove('audit-hidden');if(!pending.querySelector('.panel-head')){const head=document.createElement('div');head.className='panel-head';head.innerHTML='<div><h3>Pending Item Exposure</h3></div>';pending.insertBefore(head,pending.firstChild);}}
   }
 
   function fixRules(){
