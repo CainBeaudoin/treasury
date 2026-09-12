@@ -39,6 +39,24 @@
       ]
     },
     {
+      "source": "/credits-lulu.js",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store, max-age=0" }
+      ]
+    },
+    {
+      "source": "/inventory-odto.js",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store, max-age=0" }
+      ]
+    },
+    {
+      "source": "/visual-hierarchy.js",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store, max-age=0" }
+      ]
+    },
+    {
       "source": "/styles.css",
       "headers": [
         { "key": "Cache-Control", "value": "no-store, max-age=0" }
