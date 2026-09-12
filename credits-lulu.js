@@ -213,4 +213,11 @@
   };
 
   renderAll();
+
+  if (!document.querySelector('script[data-odto-inventory]')) {
+    const script = document.createElement('script');
+    script.src = './inventory-odto.js?v=20260912-9';
+    script.dataset.odtoInventory = '1';
+    document.body.appendChild(script);
+  }
 })();
