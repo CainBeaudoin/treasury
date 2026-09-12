@@ -66,6 +66,20 @@ const money=v=>'$'+Number(v).toLocaleString(undefined,{minimumFractionDigits:2,m
 const cr=v=>Number(v).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
 const direction=v=>`<span class="flow ${v==='In'?'flow-in':'flow-out'}">${v==='In'?'↗ In':'↙ Out'}</span>`;
 
+const overviewRows=[
+  ['12:03:43','Credit Back','Credits','12.50 cr','—','−12.50 cr','Confirmed'],
+  ['12:03:42','Crate Purchase','USDC','$250.00','—','+$250.00','Confirmed'],
+  ['12:01:16','Cashback','USDC','—','$200.00','−$200.00','Confirmed'],
+  ['11:58:20','Shipping','USDC','$24.95','—','+$24.95','Confirmed'],
+  ['11:54:07','Marketplace Fee','USDC','$12.50','—','+$12.50','Confirmed'],
+  ['11:49:36','Lulu Emission','Credits','333 cr','—','−333 cr','Confirmed'],
+  ['11:46:19','Promotional Run','Credits','250 cr','—','−250 cr','Confirmed']
+];
+function renderOverview(){
+  if($('overviewTable'))$('overviewTable').innerHTML=overviewRows.map(r=>`<tr><td class="mono">${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td><td>${r[4]}</td><td class="${String(r[5]).startsWith('+')?'positive-text':'negative-text'}">${r[5]}</td><td>${badge(r[6])}</td></tr>`).join('');
+  if($('treasuryChart')){const a=[96,101,107,111,119,128],l=[26,27,28,29,30,31],m=['Apr','May','Jun','Jul','Aug','Sep'];$('treasuryChart').innerHTML=m.map((x,i)=>`<div class="bar-group"><div class="bar asset" style="height:${a[i]/1.35}%"></div><div class="bar liability" style="height:${l[i]/1.35}%"></div><div class="bar-label">${x}</div></div>`).join('')}
+}
+
 function patchUI(){
   const tab=[...document.querySelectorAll('.tab')].find(x=>x.dataset.tab==='ledger');
   if(tab){tab.textContent='Activity';tab.dataset.tab='activity'}
@@ -94,6 +108,12 @@ function patchUI(){
     <div class="filters"><input id="creditSearch" class="control grow" placeholder="Search user or reference…"><select id="creditSource" class="control"><option value="all">All sources</option><option>Credit Back</option><option>Lulu Emission</option><option>Promotional Run</option><option>Credit Spend</option></select></div>
     <article class="panel table-panel"><div class="table-wrap"><table><thead><tr><th>Time</th><th>User</th><th>Source</th><th>Change</th><th>Balance after</th><th>Context</th><th>Reference</th><th>Status</th></tr></thead><tbody id="creditTable"></tbody></table></div></article>`;
 
+  const rules=$('rules');
+  if(rules) rules.innerHTML=`
+    <div class="section-intro"><div><h2>Rules</h2><p>Human-readable treasury economics with a permanent change history.</p></div><button class="export-btn" data-export="rules">Export CSV</button></div>
+    <div class="rule-grid"><article class="rule-card"><span>Credit Back</span><strong>5 cr per $100</strong><p>Issued on every crate open, whether paid with USDC or Credits.</p></article><article class="rule-card"><span>USDC Cashback</span><strong>80%</strong><p>Demo rate for eligible instant-sell / cashback settlements.</p></article><article class="rule-card"><span>Marketplace Fee</span><strong>1%</strong><p>Only the fee is company revenue; sale principal is not.</p></article><article class="rule-card"><span>Lulu</span><strong>100 / 333 cr</strong><p>100 per single burn; 333 per complete group of three.</p></article></div>
+    <article class="panel table-panel"><div class="panel-head"><div><h3>Change history</h3><p>Production changes should record who changed them, when and why.</p></div></div><div class="table-wrap"><table><thead><tr><th>Updated at</th><th>Rule</th><th>Old</th><th>New</th><th>Updated by</th><th>Reason</th></tr></thead><tbody id="rulesTable"></tbody></table></div></article>`;
+
   document.head.insertAdjacentHTML('beforeend',`<style>
     .segmented{display:inline-flex;border:1px solid var(--border,#202833);background:#0a0e12;border-radius:10px;padding:3px;margin-bottom:14px}.segment{border:0;background:transparent;color:#8f98a7;padding:8px 18px;border-radius:7px;cursor:pointer;font-weight:700}.segment.active{background:#1a222c;color:#fff}.activity-view{display:none}.activity-view.active{display:block}.flow{font-weight:800}.flow-in{color:#61d894}.flow-out{color:#ff6b6b}.credit-callout{border-color:rgba(201,255,113,.22)!important}.credit-formula{display:grid;grid-template-columns:1fr 1fr;padding:14px;gap:8px}.credit-formula div{border:1px solid var(--border,#202833);border-radius:8px;padding:12px;background:#0b1015}.credit-formula span{display:block;color:#8f98a7;font-size:10px;margin-bottom:5px}.credit-formula b,.credit-formula code{font-size:13px}@media(max-width:700px){.credit-formula{grid-template-columns:1fr}}
   </style>`);
@@ -116,9 +136,9 @@ function bind(){
 }
 function csvEsc(v){const s=String(v);return /[",\n]/.test(s)?`"${s.replace(/"/g,'""')}"`:s}
 function dl(name,heads,rows){const blob=new Blob([[heads,...rows].map(r=>r.map(csvEsc).join(',')).join('\n')],{type:'text/csv'}),u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),300);toast('CSV exported')}
-function exportCsv(sec){const d=new Date().toISOString().slice(0,10);if(sec==='activity')return state.activityView==='usdc'?dl(`chosen-usdc-activity-${d}.csv`,['time','type','direction','usdc','context','user','reference','status'],renderUsdc()):dl(`chosen-credits-activity-${d}.csv`,['time','type','direction','credits','context','user','reference','status'],renderCreditActivity());if(sec==='credits')return dl(`chosen-credits-${d}.csv`,['time','user','source','change','balance','context','reference','status'],renderCredits());if(sec==='reconciliation')return dl(`chosen-reconciliation-${d}.csv`,['time','scope','internal','observed','difference','severity','result','reference'],renderRecon());if(sec==='lulu')return dl(`chosen-lulu-${d}.csv`,['time','user','token_ids','burned','issued','bonus','tx','status'],renderLulu());if(sec==='rules')return dl(`chosen-rules-${d}.csv`,['updated','rule','old','new','updated_by','reason'],renderRules())}
+function exportCsv(sec){const d=new Date().toISOString().slice(0,10);if(sec==='activity')return state.activityView==='usdc'?dl(`chosen-usdc-activity-${d}.csv`,['time','type','direction','usdc','context','user','reference','status'],renderUsdc()):dl(`chosen-credits-activity-${d}.csv`,['time','type','direction','credits','context','user','reference','status'],renderCreditActivity());if(sec==='credits')return dl(`chosen-credits-${d}.csv`,['time','user','source','change','balance','context','reference','status'],renderCredits());if(sec==='reconciliation')return dl(`chosen-reconciliation-${d}.csv`,['time','scope','internal','observed','difference','severity','result','reference'],renderRecon());if(sec==='lulu')return dl(`chosen-lulu-${d}.csv`,['time','user','token_ids','burned','issued','bonus','tx','status'],renderLulu());if(sec==='rules')return dl(`chosen-rules-${d}.csv`,['updated','rule','old','new','updated_by','reason'],renderRules());if(sec==='overview')return dl(`chosen-treasury-overview-${d}.csv`,['time','event','asset','in','out','net','status'],overviewRows)}
 function toast(msg){const el=$('toast');if(!el)return;el.textContent=msg;el.classList.add('show');clearTimeout(window.__t);window.__t=setTimeout(()=>el.classList.remove('show'),1700)}
-function renderAll(){renderUsdc();renderCreditActivity();renderCredits();renderRecon();renderLulu();renderRules();if($('lastUpdated'))$('lastUpdated').textContent=new Date().toLocaleString()}
+function renderAll(){renderOverview();renderUsdc();renderCreditActivity();renderCredits();renderRecon();renderLulu();renderRules();if($('lastUpdated'))$('lastUpdated').textContent=new Date().toLocaleString()}
 function demo(){const ts=new Date().toISOString().replace('T',' ').slice(0,19),id=Math.random().toString(36).slice(2,8),user='usr_'+Math.random().toString(36).slice(2,6).toUpperCase(),vals=[100,250,500,1000],v=vals[Math.floor(Math.random()*vals.length)],back=v*CREDIT_BACK_RATE;if(Math.random()<.55){state.usdc.unshift([ts,'Crate Purchase','In',v,`$${v.toLocaleString()} crate opened`,user,'corr_'+id,'Confirmed']);state.creditActivity.unshift([ts,'Credit Back','In',back,`$${v.toLocaleString()} crate · paid with USDC`,user,'corr_'+id,'Confirmed'])}else{state.creditActivity.unshift([ts,'Credit Spend','Out',v,`$${v.toLocaleString()}-equivalent crate purchase`,user,'corr_'+id,'Confirmed']);state.creditActivity.unshift([ts,'Credit Back','In',back,`$${v.toLocaleString()} crate · paid with Credits`,user,'corr_'+id,'Confirmed'])}renderUsdc();renderCreditActivity();if($('lastUpdated'))$('lastUpdated').textContent=new Date().toLocaleString()}
 
 patchUI();bind();renderAll();setInterval(demo,15000);
