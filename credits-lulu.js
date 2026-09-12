@@ -84,7 +84,7 @@
       'Lulu Emission',
       'In',
       adjustment,
-      `Snapshot reconciliation · ${snapshot.burned.toLocaleString()} cumulative Lulu burns across mixed holder sizes`,
+      'Cumulative Lulu burn reconciliation',
       'system',
       LULU_SNAPSHOT_REF,
       'Confirmed'
@@ -95,7 +95,7 @@
       'Lulu Emission',
       `+${adjustment.toFixed(2)}`,
       '—',
-      `Snapshot reconciliation · mixed single, pair, triple and multi-triple burns`,
+      'Lulu emission reconciliation',
       LULU_SNAPSHOT_REF,
       'Confirmed'
     ]);
@@ -110,10 +110,9 @@
       .credit-program-tab{border:0;background:transparent;color:var(--muted);padding:8px 18px;border-radius:8px;cursor:pointer;font:inherit}
       .credit-program-tab.active{background:var(--surface3);color:var(--text);box-shadow:0 0 0 1px #2b3541}
       .credit-program-view{display:none}.credit-program-view.active{display:block}
-      .lulu-snapshot-note{margin:0 0 16px;padding:10px 13px;border:1px solid rgba(102,183,255,.26);background:rgba(102,183,255,.045);border-radius:11px;color:#c9d2dc;font-size:11px;line-height:1.45}
-      .lulu-snapshot-note b{color:var(--info)}
       #lulu>.metric-grid.compact{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important}
       #lulu>.metric-grid.compact>.metric-card:nth-child(4){display:none!important}
+      #lulu .section-intro p,#lulu .panel-head p{display:none!important}
       @media(max-width:900px){#lulu>.metric-grid.compact{grid-template-columns:1fr!important}}
       @media(max-width:700px){.credit-program-tabs{display:flex}.credit-program-tab{flex:1}}
     `;
@@ -135,25 +134,19 @@
       const h2 = intro.querySelector('h2');
       const p = intro.querySelector('p');
       if (h2) h2.textContent = 'Lulu';
-      if (p) p.textContent = 'Actual burn snapshot and Credit emissions. Burn eligibility does not expire.';
+      p?.remove();
     }
 
-    let note = document.getElementById('luluSnapshotNote');
-    if (!note) {
-      note = document.createElement('div');
-      note.id = 'luluSnapshotNote';
-      note.className = 'lulu-snapshot-note';
-      const hero = lulu.querySelector('.lulu-hero');
-      (hero || lulu.firstElementChild)?.insertAdjacentElement('beforebegin', note);
-    }
-    note.innerHTML = `<b>Current snapshot:</b> ${snapshot.burned.toLocaleString()} Lulus burned across a mixed distribution of single burns, pairs, triples and larger multi-triple burns. That mix has emitted ${snapshot.emitted.toLocaleString()} Credits, including ${snapshot.bonus.toLocaleString()} triple-bonus Credits. This is a current-state snapshot, not a forecast.`;
+    document.getElementById('luluSnapshotNote')?.remove();
 
     const table = lulu.querySelector('.table-panel');
     if (table && !table.querySelector('.panel-head')) {
       const head = document.createElement('div');
       head.className = 'panel-head';
-      head.innerHTML = '<div><h3>Recent Burn Activity</h3><p>Latest sample of transactions behind the cumulative burn totals.</p></div>';
+      head.innerHTML = '<div><h3>Recent Burn Activity</h3></div>';
       table.insertBefore(head, table.firstChild);
+    } else if (table) {
+      table.querySelector('.panel-head p')?.remove();
     }
   }
 
@@ -161,7 +154,7 @@
     const cards = [...document.querySelectorAll('#rules .rule-card')];
     const luluRule = cards.find(card => card.querySelector('span')?.textContent.trim() === 'Marketplace, Shipping & Lulu');
     if (luluRule) {
-      luluRule.innerHTML = '<span>Marketplace, Shipping & Lulu</span><strong>Net economics · no Lulu expiry</strong><p>Marketplace principal is not revenue; only the fee is. Shipping inflow and carrier cost stay separate. Lulu burn eligibility does not expire; actual Credit emission depends on each burn transaction because singles, pairs, triples and larger grouped burns produce different bonus totals.</p>';
+      luluRule.innerHTML = '<span>Marketplace, Shipping & Lulu</span><strong>Net economics</strong><p>Marketplace principal is not revenue; only the fee is. Shipping stays separate. Lulu emits 100 Credits per single burn or 333 Credits per three.</p>';
     }
   }
 
