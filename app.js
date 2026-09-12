@@ -105,6 +105,46 @@ function netCreditChange(){ return totalCreditInflows()-totalCreditOutflows(); }
 function newCreditEmissions(){ return ['Crate Bonus','Lulu Emission','Promotional Run'].reduce((sum,t)=>sum+sumRows(state.creditActivity,t,'In'),0); }
 function totalCreditBack(){ return sumRows(state.creditActivity,'Credit Back','In'); }
 
+function syncPolicyCopy(){
+  const setCard=(label,strong,body)=>{
+    const card=[...document.querySelectorAll('#rules .rule-card')].find(c=>c.querySelector('span')?.textContent.trim()===label);
+    if(card) card.innerHTML=`<span>${label}</span><strong>${strong}</strong><p>${body}</p>`;
+    return card;
+  };
+  setCard('Vaulted Item','Pending','No cash leaves while vaulted. Liquidation is a separate time-limited option.');
+  const expiry=[...document.querySelectorAll('#rules .rule-card')].find(c=>c.querySelector('span')?.textContent.trim()==='365-Day Expiry');
+  if(expiry) expiry.innerHTML='<span>Pending Liquidation</span><strong>70% capped</strong><p>Available for 365 days only: 70% × min(initial prize FMV, current live FMV).</p>';
+  const grid=document.querySelector('#rules .rules-grid');
+  if(grid && ![...grid.querySelectorAll('.rule-card span')].some(x=>x.textContent.trim()==='Market Protection')){
+    const shipping=[...grid.querySelectorAll('.rule-card')].find(c=>c.querySelector('span')?.textContent.trim()==='Shipping');
+    const market=document.createElement('article'); market.className='rule-card'; market.innerHTML='<span>Market Protection</span><strong>Lower value wins</strong><p>If market rises, payout is capped at the initial prize FMV. If market falls, payout uses the lower live FMV.</p>';
+    const windowCard=document.createElement('article'); windowCard.className='rule-card'; windowCard.innerHTML='<span>365-Day Window</span><strong>Expires</strong><p>After 365 days, the liquidation option is unavailable. No automatic fallback is paid.</p>';
+    grid.insertBefore(market,shipping||null); grid.insertBefore(windowCard,shipping||null);
+  }
+  const note=document.querySelector('#rules .rule-note');
+  if(note) note.innerHTML='<b>Accounting boundary:</b> a vaulted prize can have an initial FMV, a live FMV, a time-limited liquidation amount, and an expected cost basis without any USDC actually moving. Pending liquidation is 70% × min(initial FMV, live FMV) and is available for 365 days only. Physical redemption instead realizes the actual acquisition cost as USDC outflow.';
+
+  const pendingHead=[...document.querySelectorAll('#credits .subsection-head h3')].find(x=>x.textContent.trim()==='Pending item exposure');
+  if(pendingHead){ const p=pendingHead.parentElement?.querySelector('p'); if(p) p.textContent='These prizes are still theoretical. During the 365-day window, each can liquidate at a capped market-aware rate or become a real USDC fulfillment cost if physically redeemed.'; }
+  const creditExp=document.getElementById('pendingCreditBackExposure'); if(creditExp?.previousElementSibling) creditExp.previousElementSibling.textContent='Pending Credit liquidation';
+  const usdcExp=document.getElementById('pendingUsdcFallback'); if(usdcExp?.previousElementSibling) usdcExp.previousElementSibling.textContent='Pending USDC liquidation';
+  const pendingTable=document.querySelector('#pendingItemsTable')?.closest('table')?.querySelector('thead tr');
+  if(pendingTable) pendingTable.innerHTML='<th>Opened</th><th>User</th><th>Item</th><th>Paid with</th><th>Entry</th><th>Initial FMV</th><th>Live FMV</th><th>70% liquidation</th><th>Expected cost</th><th>Days left</th><th>Status</th>';
+
+  const metric=document.getElementById('pendingCreditMetric')?.closest('.metric-card');
+  if(metric){ metric.querySelector('.metric-label').textContent='Pending Credit Liquidation'; metric.querySelector('.metric-foot').textContent='70% capped liquidation within 365 days'; }
+  const creditsMetric=document.getElementById('creditsPendingBack')?.closest('.metric-card');
+  if(creditsMetric){ creditsMetric.querySelector('.metric-label').textContent='Pending Credit Liquidation'; creditsMetric.querySelector('.metric-foot').textContent='Potential 70% liquidation within claim window'; }
+
+  const settlePanel=[...document.querySelectorAll('#credits .panel h3')].find(x=>x.textContent.trim()==='How Credits settle')?.closest('.panel');
+  if(settlePanel){
+    const stack=settlePanel.querySelector('.info-stack');
+    if(stack) stack.innerHTML='<div><b>Credit Back</b><span>80% of the prize\'s live FMV when a Credits-funded prize is cashed back immediately. It may be lower or higher than the entry Credits.</span></div><div><b>Vaulted prize</b><span>No immediate Credit Back and no USDC outflow. It becomes pending exposure.</span></div><div><b>Pending liquidation</b><span>For 365 days, liquidation is 70% × the lower of initial prize FMV or current live FMV. Upside is capped; downside follows the market.</span></div><div><b>Physical redemption</b><span>The theoretical prize becomes real cash cost: Chosen records the actual product cost basis as USDC outflow.</span></div><div><b>After 365 days</b><span>The liquidation option expires. There is no automatic fallback payout.</span></div>';
+  }
+  document.querySelectorAll('#creditActivityType option, #creditsSource option').forEach(o=>{ if(o.textContent.trim()==='Expiry Credit Back') o.remove(); });
+  document.querySelectorAll('.mix-row').forEach(row=>{ const title=row.querySelector('strong')?.textContent.trim(); if(title==='Vaulted item'){ const span=row.querySelector('span'); if(span) span.textContent='Creates time-limited liquidation exposure plus an expected fulfillment cost reserve.'; } });
+}
+
 function renderOverview(){
   const reserve=pendingReserve();
   setText('overviewPendingReserve',money(reserve));
@@ -197,7 +237,7 @@ function renderLulu(){
 }
 
 function renderRules(){ document.getElementById('rulesTable').innerHTML=state.rules.map(r=>`<tr><td class="mono">${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td class="positive-text">${r[3]}</td><td class="mono">${r[4]}</td><td>${r[5]}</td></tr>`).join(''); return state.rules; }
-function renderAll(){ renderOverview(); renderUsdc(); renderCreditActivity(); renderRecon(); renderCredits(); renderLulu(); renderRules(); setText('lastUpdated',new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'})); }
+function renderAll(){ syncPolicyCopy(); renderOverview(); renderUsdc(); renderCreditActivity(); renderRecon(); renderCredits(); renderLulu(); renderRules(); setText('lastUpdated',new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'})); }
 
 function csvCell(v){ return `"${String(v??'').replace(/"/g,'""')}"`; }
 function downloadCsv(name,headers,rows){ const csv=[headers,...rows].map(r=>r.map(csvCell).join(',')).join('\n'); const blob=new Blob([csv],{type:'text/csv'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`chosen-${name}-${new Date().toISOString().slice(0,10)}.csv`; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000); }
