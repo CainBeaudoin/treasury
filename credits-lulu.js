@@ -214,11 +214,25 @@
 
   renderAll();
 
-  function loadTreasuryAudit() {
-    if (document.querySelector('script[data-treasury-audit]')) return;
+  function loadCreditLayoutHotfix() {
+    if (document.querySelector('script[data-credit-layout-hotfix]')) return;
     const script = document.createElement('script');
-    script.src = './treasury-audit.js?v=20260912-11';
+    script.src = './credit-layout-hotfix.js?v=20260912-12';
+    script.dataset.creditLayoutHotfix = '1';
+    document.body.appendChild(script);
+  }
+
+  function loadTreasuryAudit() {
+    const existing = document.querySelector('script[data-treasury-audit]');
+    if (existing) {
+      if (document.body.dataset.treasuryAudit) loadCreditLayoutHotfix();
+      else existing.addEventListener('load', loadCreditLayoutHotfix, { once: true });
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = './treasury-audit.js?v=20260912-12';
     script.dataset.treasuryAudit = '1';
+    script.addEventListener('load', loadCreditLayoutHotfix, { once: true });
     document.body.appendChild(script);
   }
 
@@ -230,7 +244,7 @@
       return;
     }
     const script = document.createElement('script');
-    script.src = './visual-hierarchy.js?v=20260912-11';
+    script.src = './visual-hierarchy.js?v=20260912-12';
     script.dataset.visualHierarchy = '1';
     script.addEventListener('load', loadTreasuryAudit, { once: true });
     document.body.appendChild(script);
@@ -239,7 +253,7 @@
   const existingInventory = document.querySelector('script[data-odto-inventory]');
   if (!existingInventory) {
     const script = document.createElement('script');
-    script.src = './inventory-odto.js?v=20260912-11';
+    script.src = './inventory-odto.js?v=20260912-12';
     script.dataset.odtoInventory = '1';
     script.addEventListener('load', loadVisualHierarchy, { once: true });
     document.body.appendChild(script);
