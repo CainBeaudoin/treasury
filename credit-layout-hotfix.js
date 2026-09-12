@@ -71,6 +71,14 @@
     document.head.appendChild(style);
   }
 
+  function loadRulesBaseline() {
+    if (document.querySelector('script[data-rules-baseline]')) return;
+    const script = document.createElement('script');
+    script.src = './rules-baseline.js?v=20260912-13';
+    script.dataset.rulesBaseline = '1';
+    document.body.appendChild(script);
+  }
+
   apply();
   document.addEventListener('click', e => {
     if (e.target.closest('.tab,.credit-program-tab,.segment,#refreshBtn')) {
@@ -79,4 +87,5 @@
     }
   });
   setTimeout(apply, 250);
+  loadRulesBaseline();
 })();
