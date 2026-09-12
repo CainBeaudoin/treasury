@@ -1,154 +1,124 @@
-const LULU_SUPPLY = 3333;
-const LULU_LIFETIME_MAX = Math.floor(LULU_SUPPLY / 3) * 333 + (LULU_SUPPLY % 3) * 100;
-const initialBurned = 37;
+const LULU_SUPPLY=3333;
+const LULU_MAX=Math.floor(LULU_SUPPLY/3)*333+(LULU_SUPPLY%3)*100;
+const CREDIT_BACK_RATE=.05;
 
-const state = {
-  luluBurned: initialBurned,
-  luluEmitted: 4096,
-  ledger: [
-    ['2026-09-12 11:58:42','Crate purchase','USDC','100.00','80.00','USDC','usr_7J2K','corr_9f2a81','Confirmed'],
-    ['2026-09-12 11:57:18','Crate purchase','Credits','100','80','Credits','usr_2P8D','corr_f37c11','Confirmed'],
-    ['2026-09-12 11:54:07','Cashback','USDC','0.00','420.00','USDC','usr_4W1A','corr_81a2db','Confirmed'],
-    ['2026-09-12 11:49:36','Lulu burn','Lulu','3','333','Credits','usr_1TR8','corr_40c6e1','Confirmed'],
-    ['2026-09-12 11:46:19','Credit spend','Credits','500','0','Credits','usr_9N3F','corr_1c70dd','Confirmed'],
-    ['2026-09-12 11:40:12','Crate purchase','USDC','250.00','200.00','USDC','usr_6LM2','corr_7a981e','Confirmed'],
-    ['2026-09-12 11:35:55','Adjustment','Credits','0','150','Credits','usr_3X5Q','corr_f92b73','Pending'],
-    ['2026-09-12 11:29:03','Crate purchase','Credits','1000','800','Credits','usr_8Q4E','corr_a81733','Confirmed'],
-    ['2026-09-12 11:22:41','Crate purchase','USDC','500.00','400.00','USDC','usr_7J2K','corr_704bc1','Confirmed'],
-    ['2026-09-12 11:16:02','Lulu burn','Lulu','2','200','Credits','usr_5V9R','corr_c996d2','Confirmed'],
-    ['2026-09-12 11:09:16','Crate purchase','USDC','100.00','80.00','USDC','usr_0K1C','corr_43bb0f','Confirmed'],
-    ['2026-09-12 11:02:24','Crate purchase','Credits','250','200','Credits','usr_2P8D','corr_d09174','Confirmed']
+const state={
+  activityView:'usdc',luluBurned:37,luluEmitted:4096,
+  usdc:[
+    ['2026-09-12 12:03:42','Crate Purchase','In',250,'$250 crate opened','usr_7J2K','corr_usdc_01','Confirmed'],
+    ['2026-09-12 12:01:16','Cashback','Out',200,'80% instant sell settlement','usr_7J2K','corr_cash_01','Confirmed'],
+    ['2026-09-12 11:58:20','Shipping','In',24.95,'UPS shipping charge collected','usr_2P8D','ship_8e13','Confirmed'],
+    ['2026-09-12 11:54:07','Marketplace Fee','In',12.50,'1% fee on $1,250 marketplace sale','usr_4W1A','mkt_81a2','Confirmed'],
+    ['2026-09-12 11:49:36','Crate Purchase','In',1000,'$1,000 crate opened','usr_1TR8','corr_usdc_02','Confirmed'],
+    ['2026-09-12 11:46:19','Cashback','Out',800,'80% instant sell settlement','usr_1TR8','corr_cash_02','Confirmed'],
+    ['2026-09-12 11:40:12','Crate Purchase','In',100,'$100 crate opened','usr_6LM2','corr_usdc_03','Confirmed'],
+    ['2026-09-12 11:35:55','Shipping','In',18.40,'Canada Post shipping charge','usr_3X5Q','ship_31f2','Pending'],
+    ['2026-09-12 11:29:03','Marketplace Fee','In',6.55,'1% fee on $655 marketplace sale','usr_8Q4E','mkt_a817','Confirmed']
   ],
-  recon: [
+  creditActivity:[
+    ['2026-09-12 12:03:43','Credit Back','In',12.50,'$250 crate · paid with USDC','usr_7J2K','corr_usdc_01','Confirmed'],
+    ['2026-09-12 12:00:02','Credit Back','In',50,'$1,000 crate · paid with Credits','usr_2P8D','corr_credit_01','Confirmed'],
+    ['2026-09-12 11:57:19','Credit Spend','Out',1000,'$1,000-equivalent crate purchase','usr_2P8D','corr_credit_01','Confirmed'],
+    ['2026-09-12 11:49:36','Lulu Emission','In',333,'3 Lulus burned · includes 33 bonus','usr_1TR8','0xa16ed92f5…','Confirmed'],
+    ['2026-09-12 11:46:19','Promotional Run','In',250,'September collector campaign','usr_9N3F','promo_sep12','Confirmed'],
+    ['2026-09-12 11:40:13','Credit Back','In',5,'$100 crate · paid with USDC','usr_6LM2','corr_usdc_03','Confirmed'],
+    ['2026-09-12 11:35:55','Credit Spend','Out',250,'$250-equivalent crate purchase','usr_3X5Q','corr_credit_02','Confirmed'],
+    ['2026-09-12 11:35:56','Credit Back','In',12.50,'$250 crate · paid with Credits','usr_3X5Q','corr_credit_02','Confirmed'],
+    ['2026-09-12 11:16:03','Lulu Emission','In',200,'2 Lulus burned','usr_5V9R','0xc996d2…','Confirmed'],
+    ['2026-09-12 10:52:14','Promotional Run','In',100,'New-user activation campaign','usr_0K1C','promo_newuser','Confirmed']
+  ],
+  recon:[
     ['2026-09-12 11:52:12','USDC wallet · 0x41a…d91','$18,300.00','$18,295.00','-$5.00','High','Mismatch','tx_8b7c11'],
     ['2026-09-12 11:52:12','USDC wallet · 0x8d2…a31','$22,408.18','$22,408.18','$0.00','Info','Matched','wallet_8d2'],
     ['2026-09-12 11:52:11','Credits ledger · usr_7J2K','2,480 cr','2,480 cr','0 cr','Info','Matched','usr_7J2K'],
-    ['2026-09-12 11:52:11','Credits ledger · usr_2P8D','5,110 cr','5,110 cr','0 cr','Info','Matched','usr_2P8D'],
-    ['2026-09-12 11:52:11','Pending cashback queue','6 entries','6 entries','0','Info','Matched','queue_credits'],
+    ['2026-09-12 11:52:11','Credit Back queue','6 entries','6 entries','0','Info','Matched','credit_back_queue'],
     ['2026-09-12 11:52:11','Lulu emission ledger','4,096 cr','4,096 cr','0 cr','Info','Matched','lulu_emissions'],
-    ['2026-09-12 11:52:11','Treasury reserve','$128,440.22','$128,440.22','$0.00','Info','Matched','treasury_main']
+    ['2026-09-12 11:52:11','Shipping receipts','$6,418.15','$6,418.15','$0.00','Info','Matched','shipping_receipts']
   ],
-  credits: [
-    ['2026-09-12 11:57:19','usr_2P8D','Crate cashback','+80','5,110','corr_f37c11','Confirmed'],
-    ['2026-09-12 11:49:36','usr_1TR8','Lulu burn','+333','2,033','corr_40c6e1','Confirmed'],
-    ['2026-09-12 11:46:19','usr_9N3F','Crate spend','-500','1,225','corr_1c70dd','Confirmed'],
-    ['2026-09-12 11:35:55','usr_3X5Q','Manual adjustment','+150','3,600','corr_f92b73','Pending'],
-    ['2026-09-12 11:29:04','usr_8Q4E','Crate cashback','+800','9,240','corr_a81733','Confirmed'],
-    ['2026-09-12 11:16:03','usr_5V9R','Lulu burn','+200','1,400','corr_c996d2','Confirmed'],
-    ['2026-09-12 10:52:14','usr_0K1C','Promo','+250','950','promo_sep12','Confirmed'],
-    ['2026-09-12 10:33:47','usr_7J2K','Crate spend','-100','2,480','corr_b11fc0','Confirmed'],
-    ['2026-09-12 10:29:12','usr_4W1A','Crate cashback','+420','4,885','corr_81a2db','Confirmed']
+  credits:[
+    ['2026-09-12 12:03:43','usr_7J2K','Credit Back','+12.50','2,492.50','$250 crate · USDC','corr_usdc_01','Confirmed'],
+    ['2026-09-12 12:00:02','usr_2P8D','Credit Back','+50.00','5,160.00','$1,000 crate · Credits','corr_credit_01','Confirmed'],
+    ['2026-09-12 11:57:19','usr_2P8D','Credit Spend','−1,000.00','5,110.00','$1,000-equivalent crate','corr_credit_01','Confirmed'],
+    ['2026-09-12 11:49:36','usr_1TR8','Lulu Emission','+333.00','2,033.00','3 Lulus burned','0xa16ed92f5…','Confirmed'],
+    ['2026-09-12 11:46:19','usr_9N3F','Promotional Run','+250.00','1,475.00','September collector campaign','promo_sep12','Confirmed'],
+    ['2026-09-12 11:40:13','usr_6LM2','Credit Back','+5.00','805.00','$100 crate · USDC','corr_usdc_03','Confirmed'],
+    ['2026-09-12 11:35:56','usr_3X5Q','Credit Back','+12.50','3,612.50','$250 crate · Credits','corr_credit_02','Confirmed'],
+    ['2026-09-12 11:16:03','usr_5V9R','Lulu Emission','+200.00','1,400.00','2 Lulus burned','0xc996d2…','Confirmed'],
+    ['2026-09-12 10:52:14','usr_0K1C','Promotional Run','+100.00','950.00','New-user activation','promo_newuser','Confirmed']
   ],
-  lulu: [
-    ['2026-07-28 00:33:39','usr_1TR8','36, 37','2','200','0','0xa16ed92f5…','Confirmed'],
-    ['2026-07-14 04:56:13','usr_1TR8','35','1','100','0','0x6c758d0f6…','Confirmed'],
-    ['2026-07-08 18:54:40','usr_1TR8','33, 34','2','200','0','0x0bff3d2a7…','Confirmed'],
-    ['2026-07-07 19:06:01','usr_1TR8','25, 31','2','200','0','0x208523753…','Confirmed'],
-    ['2026-07-04 08:12:12','usr_1TR8','48','1','100','0','0xbc1b21011…','Confirmed'],
-    ['2026-07-04 08:12:03','usr_1TR8','14','1','100','0','0xfa007b284…','Confirmed'],
-    ['2026-07-03 20:20:04','usr_1TR8','26, 27, 28','3','333','33','0xa1bbfa767…','Confirmed'],
-    ['2026-07-03 19:22:37','usr_7B4Q','41, 42, 43','3','333','33','0x6cba20bff…','Confirmed']
+  lulu:[
+    ['2026-07-28 00:33:39','usr_1TR8','36, 37','2','200','0','0xa16ed92f5…','Confirmed'],['2026-07-14 04:56:13','usr_1TR8','35','1','100','0','0x6c758d0f6…','Confirmed'],['2026-07-08 18:54:40','usr_1TR8','33, 34','2','200','0','0x0bff3d2a7…','Confirmed'],['2026-07-03 20:20:04','usr_1TR8','26, 27, 28','3','333','33','0xa1bbfa767…','Confirmed']
   ],
-  rules: [
-    ['2026-06-13 09:05:56','USDC cashback rate','—','80%','system','Initial treasury configuration'],
-    ['2026-06-13 09:05:56','Credit cashback rate','—','80%','system','Initial treasury configuration'],
-    ['2026-06-13 09:05:56','Market fee','—','0%','system','Initial launch configuration'],
-    ['2026-06-13 09:05:56','Purchase fee','—','0%','system','Initial launch configuration'],
-    ['2026-06-13 09:05:56','Lulu single burn','—','100 credits','system','Lulu burn program'],
-    ['2026-06-13 09:05:56','Lulu triple burn','—','333 credits','system','Lulu bonus rule']
+  rules:[
+    ['2026-09-12 12:05:00','Credit Back rate','—','5 cr / $100','system','Every crate open'],
+    ['2026-09-12 12:05:00','Credit Back eligibility','—','USDC + Credits','system','Independent of payment method'],
+    ['2026-06-13 09:05:56','USDC cashback rate','—','80%','system','Demo settlement rule'],
+    ['2026-06-13 09:05:56','Marketplace fee','—','1%','system','Demo fee'],
+    ['2026-06-13 09:05:56','Lulu single burn','—','100 credits','system','Lulu program'],
+    ['2026-06-13 09:05:56','Lulu triple burn','—','333 credits','system','Lulu bonus']
   ]
 };
 
-const overviewRows = [
-  ['11:58:42','Crate purchase','USDC','$100.00','$80.00','+$20.00','Confirmed'],
-  ['11:57:19','Credit crate + cashback','Credits','100 cr','80 cr','-20 cr','Confirmed'],
-  ['11:49:36','Lulu emission','Credits','—','333 cr','-333 cr','Confirmed'],
-  ['11:40:12','Crate purchase','USDC','$250.00','$200.00','+$50.00','Confirmed'],
-  ['11:29:04','Credit crate + cashback','Credits','1,000 cr','800 cr','-200 cr','Confirmed'],
-  ['11:22:41','Crate purchase','USDC','$500.00','$400.00','+$100.00','Confirmed']
-];
+const $=id=>document.getElementById(id);
+const esc=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+const badge=v=>`<span class="badge ${String(v).toLowerCase().replace(/\s/g,'-')}">${esc(v)}</span>`;
+const money=v=>'$'+Number(v).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+const cr=v=>Number(v).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+const direction=v=>`<span class="flow ${v==='In'?'flow-in':'flow-out'}">${v==='In'?'↗ In':'↙ Out'}</span>`;
 
-function statusBadge(v){ const c=v.toLowerCase().replace(/\s/g,'-'); return `<span class="badge ${c}">${v}</span>`; }
-function assetBadge(v){ const c=v.toLowerCase(); return `<span class="badge asset-${c}">${v}</span>`; }
-function esc(s){ return String(s).replace(/[&<>"']/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;' }[c])); }
+function patchUI(){
+  const tab=[...document.querySelectorAll('.tab')].find(x=>x.dataset.tab==='ledger');
+  if(tab){tab.textContent='Activity';tab.dataset.tab='activity'}
+  const old=$('ledger');
+  if(old){old.id='activity';old.innerHTML=`
+    <div class="section-intro"><div><h2>Activity</h2><p>USDC and Credits are separate systems. Toggle between them instead of mixing both in one log.</p></div><button class="export-btn" data-export="activity">Export CSV</button></div>
+    <div class="segmented"><button class="segment active" data-view="usdc">USDC</button><button class="segment" data-view="credits">Credits</button></div>
+    <div id="usdcActivity" class="activity-view active">
+      <div class="rule-callout"><b>USDC tracks cash flow.</b> Crate purchases, shipping charges and marketplace fees are inflows. User cashback / instant-sell settlements are outflows.</div>
+      <div class="metric-grid compact"><article class="metric-card"><div class="metric-label">Crate purchases · QTD</div><div class="metric-value">+$184,520.00</div></article><article class="metric-card"><div class="metric-label">Cashback · QTD</div><div class="metric-value negative-text">−$119,834.40</div></article><article class="metric-card"><div class="metric-label">Shipping collected</div><div class="metric-value">+$6,418.15</div></article><article class="metric-card"><div class="metric-label">Marketplace fees</div><div class="metric-value">+$1,284.62</div></article></div>
+      <div class="filters"><input id="usdcSearch" class="control grow" placeholder="Search user, reference or event…"><select id="usdcType" class="control"><option value="all">All types</option><option>Crate Purchase</option><option>Cashback</option><option>Shipping</option><option>Marketplace Fee</option></select><select id="usdcDirection" class="control"><option value="all">In + Out</option><option>In</option><option>Out</option></select><select id="usdcStatus" class="control"><option value="all">All statuses</option><option>Confirmed</option><option>Pending</option><option>Failed</option></select></div>
+      <article class="panel table-panel"><div class="table-wrap"><table><thead><tr><th>Time</th><th>Type</th><th>Direction</th><th>USDC</th><th>Business context</th><th>User</th><th>Reference</th><th>Status</th></tr></thead><tbody id="usdcTable"></tbody></table></div></article>
+    </div>
+    <div id="creditsActivity" class="activity-view">
+      <div class="rule-callout credit-callout"><b>Credit Back is universal:</b> every crate open emits <strong>5 credits per $100 of crate value</strong>, regardless of whether it was bought with USDC or Credits. $250 → 12.5 cr; $1,000 → 50 cr.</div>
+      <div class="metric-grid compact"><article class="metric-card"><div class="metric-label">Credit Back · QTD</div><div class="metric-value">+9,226.00</div></article><article class="metric-card"><div class="metric-label">Lulu · lifetime</div><div class="metric-value">+4,096</div></article><article class="metric-card"><div class="metric-label">Promotional Runs · QTD</div><div class="metric-value">+3,850</div></article><article class="metric-card"><div class="metric-label">Credits spent · QTD</div><div class="metric-value negative-text">−67,240</div></article></div>
+      <div class="filters"><input id="creditActivitySearch" class="control grow" placeholder="Search user, reference or event…"><select id="creditActivityType" class="control"><option value="all">All types</option><option>Credit Back</option><option>Lulu Emission</option><option>Promotional Run</option><option>Credit Spend</option></select><select id="creditActivityDirection" class="control"><option value="all">In + Out</option><option>In</option><option>Out</option></select><select id="creditActivityStatus" class="control"><option value="all">All statuses</option><option>Confirmed</option><option>Pending</option><option>Failed</option></select></div>
+      <article class="panel table-panel"><div class="table-wrap"><table><thead><tr><th>Time</th><th>Type</th><th>Direction</th><th>Credits</th><th>Source / Context</th><th>User</th><th>Reference</th><th>Status</th></tr></thead><tbody id="creditActivityTable"></tbody></table></div></article>
+    </div>`}
 
-function renderOverview(){
-  document.getElementById('overviewTable').innerHTML = overviewRows.map(r=>`<tr><td class="mono">${r[0]}</td><td>${r[1]}</td><td>${assetBadge(r[2])}</td><td>${r[3]}</td><td>${r[4]}</td><td class="${r[5].startsWith('+')?'positive-text':'negative-text'}">${r[5]}</td><td>${statusBadge(r[6])}</td></tr>`).join('');
-  const assets=[96,101,107,111,119,128], liabilities=[26,27,28,29,30,31]; const labels=['Apr','May','Jun','Jul','Aug','Sep'];
-  const chart=document.getElementById('treasuryChart'); chart.innerHTML=labels.map((m,i)=>`<div class="bar-group"><div class="bar asset" title="$${assets[i]}k assets" style="height:${assets[i]/1.35}%"></div><div class="bar liability" title="$${liabilities[i]}k liabilities" style="height:${liabilities[i]/1.35}%"></div><div class="bar-label">${m}</div></div>`).join('');
+  const credits=$('credits');
+  if(credits) credits.innerHTML=`
+    <div class="section-intro"><div><h2>Credits</h2><p>Track Credit emissions, usage and liability without treating Credits like cash.</p></div><button class="export-btn" data-export="credits">Export CSV</button></div>
+    <div class="metric-grid compact"><article class="metric-card"><div class="metric-label">Outstanding</div><div class="metric-value">84,920.00</div><div class="metric-foot">Held by users</div></article><article class="metric-card"><div class="metric-label">Credit Back issued</div><div class="metric-value">91,420.50</div><div class="metric-foot">Lifetime</div></article><article class="metric-card"><div class="metric-label">Lulu issued</div><div class="metric-value" id="creditsLuluIssued">4,096</div><div class="metric-foot">Lifetime</div></article><article class="metric-card"><div class="metric-label">Promotional issued</div><div class="metric-value">21,600</div><div class="metric-foot">Lifetime</div></article></div>
+    <div class="two-col"><article class="panel"><div class="panel-head"><div><h3>Issuance by source</h3><p>Only newly-created Credits count as issuance.</p></div></div><div class="horizontal-bars" id="creditSourceBars"></div></article><article class="panel"><div class="panel-head"><div><h3>Credit Back rule</h3><p>Reward emission is based on crate value, not payment method.</p></div></div><div class="credit-formula"><div><span>Rate</span><b>5 cr / $100</b></div><div><span>$250 crate</span><b>12.5 cr</b></div><div><span>$1,000 crate</span><b>50 cr</b></div><div><span>Formula</span><code>crate value × 5%</code></div></div></article></div>
+    <div class="filters"><input id="creditSearch" class="control grow" placeholder="Search user or reference…"><select id="creditSource" class="control"><option value="all">All sources</option><option>Credit Back</option><option>Lulu Emission</option><option>Promotional Run</option><option>Credit Spend</option></select></div>
+    <article class="panel table-panel"><div class="table-wrap"><table><thead><tr><th>Time</th><th>User</th><th>Source</th><th>Change</th><th>Balance after</th><th>Context</th><th>Reference</th><th>Status</th></tr></thead><tbody id="creditTable"></tbody></table></div></article>`;
+
+  document.head.insertAdjacentHTML('beforeend',`<style>
+    .segmented{display:inline-flex;border:1px solid var(--border,#202833);background:#0a0e12;border-radius:10px;padding:3px;margin-bottom:14px}.segment{border:0;background:transparent;color:#8f98a7;padding:8px 18px;border-radius:7px;cursor:pointer;font-weight:700}.segment.active{background:#1a222c;color:#fff}.activity-view{display:none}.activity-view.active{display:block}.flow{font-weight:800}.flow-in{color:#61d894}.flow-out{color:#ff6b6b}.credit-callout{border-color:rgba(201,255,113,.22)!important}.credit-formula{display:grid;grid-template-columns:1fr 1fr;padding:14px;gap:8px}.credit-formula div{border:1px solid var(--border,#202833);border-radius:8px;padding:12px;background:#0b1015}.credit-formula span{display:block;color:#8f98a7;font-size:10px;margin-bottom:5px}.credit-formula b,.credit-formula code{font-size:13px}@media(max-width:700px){.credit-formula{grid-template-columns:1fr}}
+  </style>`);
 }
 
-function renderLedger(){
-  const q=(document.getElementById('ledgerSearch')?.value||'').toLowerCase();
-  const a=document.getElementById('ledgerAsset')?.value||'all', t=document.getElementById('ledgerType')?.value||'all', s=document.getElementById('ledgerStatus')?.value||'all';
-  const filtered=state.ledger.filter(r=>(!q||r.join(' ').toLowerCase().includes(q))&&(a==='all'||r[2]===a||r[5]===a)&&(t==='all'||r[1]===t)&&(s==='all'||r[8]===s));
-  document.getElementById('ledgerTable').innerHTML=filtered.map(r=>{
-    const invalid=(r[1]==='Crate purchase'&&r[2]==='USDC'&&r[5]!=='USDC')||(r[1]==='Crate purchase'&&r[2]==='Credits'&&r[5]!=='Credits');
-    return `<tr><td class="mono">${r[0]}</td><td>${r[1]}${invalid?' <span class="badge failed">Invalid pair</span>':''}</td><td>${assetBadge(r[2])}</td><td>${r[3]}</td><td>${r[4]}</td><td>${assetBadge(r[5])}</td><td class="mono">${r[6]}</td><td class="mono">${r[7]}</td><td>${statusBadge(r[8])}</td></tr>`;
-  }).join('');
-  return filtered;
+function renderUsdc(){const q=($('usdcSearch')?.value||'').toLowerCase(),t=$('usdcType')?.value||'all',d=$('usdcDirection')?.value||'all',s=$('usdcStatus')?.value||'all';const rows=state.usdc.filter(r=>(!q||r.join(' ').toLowerCase().includes(q))&&(t==='all'||r[1]===t)&&(d==='all'||r[2]===d)&&(s==='all'||r[7]===s));if($('usdcTable'))$('usdcTable').innerHTML=rows.map(r=>`<tr><td class="mono">${r[0]}</td><td>${r[1]}</td><td>${direction(r[2])}</td><td class="${r[2]==='In'?'positive-text':'negative-text'}">${r[2]==='In'?'+':'−'}${money(r[3])}</td><td>${r[4]}</td><td class="mono">${r[5]}</td><td class="mono">${r[6]}</td><td>${badge(r[7])}</td></tr>`).join('');return rows}
+function renderCreditActivity(){const q=($('creditActivitySearch')?.value||'').toLowerCase(),t=$('creditActivityType')?.value||'all',d=$('creditActivityDirection')?.value||'all',s=$('creditActivityStatus')?.value||'all';const rows=state.creditActivity.filter(r=>(!q||r.join(' ').toLowerCase().includes(q))&&(t==='all'||r[1]===t)&&(d==='all'||r[2]===d)&&(s==='all'||r[7]===s));if($('creditActivityTable'))$('creditActivityTable').innerHTML=rows.map(r=>`<tr><td class="mono">${r[0]}</td><td>${r[1]}</td><td>${direction(r[2])}</td><td class="${r[2]==='In'?'positive-text':'negative-text'}">${r[2]==='In'?'+':'−'}${cr(r[3])}</td><td>${r[4]}</td><td class="mono">${r[5]}</td><td class="mono">${r[6]}</td><td>${badge(r[7])}</td></tr>`).join('');return rows}
+function renderCredits(){const q=($('creditSearch')?.value||'').toLowerCase(),src=$('creditSource')?.value||'all';const rows=state.credits.filter(r=>(src==='all'||r[2]===src)&&(!q||r.join(' ').toLowerCase().includes(q)));if($('creditTable'))$('creditTable').innerHTML=rows.map(r=>`<tr><td class="mono">${r[0]}</td><td class="mono">${r[1]}</td><td>${r[2]}</td><td class="${r[3].startsWith('+')?'positive-text':'negative-text'}">${r[3]}</td><td>${r[4]} cr</td><td>${r[5]}</td><td class="mono">${r[6]}</td><td>${badge(r[7])}</td></tr>`).join('');if($('creditSourceBars'))$('creditSourceBars').innerHTML=[['Credit Back',78],['Promotional Runs',18],['Lulu',4]].map(([n,p])=>`<div class="hbar-row"><div class="hbar-label"><b>${n}</b><span>${p}% of modeled issuance</span></div><div class="hbar-track"><div class="hbar-fill" style="width:${p}%"></div></div></div>`).join('');return rows}
+function renderRecon(){const sev=$('reconSeverity')?.value||'all',res=$('reconStatus')?.value||'all',q=($('reconSearch')?.value||'').toLowerCase();const rows=state.recon.filter(r=>(sev==='all'||r[5]===sev)&&(res==='all'||r[6]===res)&&(!q||r.join(' ').toLowerCase().includes(q)));if($('reconTable'))$('reconTable').innerHTML=rows.map(r=>`<tr><td class="mono">${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td><td class="${r[4].startsWith('-')?'negative-text':''}">${r[4]}</td><td>${badge(r[5])}</td><td>${badge(r[6])}</td><td class="mono">${r[7]}</td></tr>`).join('');return rows}
+function maxLulu(n){return Math.floor(n/3)*333+(n%3)*100}
+function renderLulu(){const rem=LULU_SUPPLY-state.luluBurned,remMax=maxLulu(rem),lost=Math.max(0,LULU_MAX-state.luluEmitted-remMax),bonus=Math.max(0,state.luluEmitted-state.luluBurned*100);if($('luluBurned'))$('luluBurned').textContent=state.luluBurned.toLocaleString();if($('luluRemaining'))$('luluRemaining').textContent=rem.toLocaleString();if($('luluEmitted'))$('luluEmitted').textContent=state.luluEmitted.toLocaleString();if($('creditsLuluIssued'))$('creditsLuluIssued').textContent=state.luluEmitted.toLocaleString();if($('luluMaxRemaining'))$('luluMaxRemaining').textContent=remMax.toLocaleString();if($('overviewLuluRemaining'))$('overviewLuluRemaining').textContent=remMax.toLocaleString()+' cr';if($('luluBonusIssued'))$('luluBonusIssued').textContent=bonus.toLocaleString();if($('luluLostPotential'))$('luluLostPotential').textContent=lost.toLocaleString();if($('luluProgressText'))$('luluProgressText').textContent=`${state.luluBurned.toLocaleString()} / ${LULU_SUPPLY.toLocaleString()}`;if($('luluSupplyProgress'))$('luluSupplyProgress').style.width=Math.max(.3,state.luluBurned/LULU_SUPPLY*100)+'%';const q=($('luluSearch')?.value||'').toLowerCase(),st=$('luluStatus')?.value||'all';const rows=state.lulu.filter(r=>(st==='all'||r[7]===st)&&(!q||r.join(' ').toLowerCase().includes(q)));if($('luluTable'))$('luluTable').innerHTML=rows.map(r=>`<tr><td class="mono">${r[0]}</td><td class="mono">${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td><td class="positive-text">+${r[4]} cr</td><td>${Number(r[5])?`+${r[5]} cr`:'—'}</td><td class="mono">${r[6]}</td><td>${badge(r[7])}</td></tr>`).join('');return rows}
+function renderRules(){if($('rulesTable'))$('rulesTable').innerHTML=state.rules.map(r=>`<tr><td class="mono">${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td><td class="mono">${r[4]}</td><td>${r[5]}</td></tr>`).join('');return state.rules}
+
+function bind(){
+  document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===b));document.querySelectorAll('.tab-panel').forEach(p=>p.classList.toggle('active',p.id===b.dataset.tab))});
+  document.querySelectorAll('.segment').forEach(b=>b.onclick=()=>{state.activityView=b.dataset.view;document.querySelectorAll('.segment').forEach(x=>x.classList.toggle('active',x===b));$('usdcActivity').classList.toggle('active',state.activityView==='usdc');$('creditsActivity').classList.toggle('active',state.activityView==='credits')});
+  [['usdcSearch','input',renderUsdc],['usdcType','change',renderUsdc],['usdcDirection','change',renderUsdc],['usdcStatus','change',renderUsdc],['creditActivitySearch','input',renderCreditActivity],['creditActivityType','change',renderCreditActivity],['creditActivityDirection','change',renderCreditActivity],['creditActivityStatus','change',renderCreditActivity],['creditSearch','input',renderCredits],['creditSource','change',renderCredits],['reconSeverity','change',renderRecon],['reconStatus','change',renderRecon],['reconSearch','input',renderRecon],['luluSearch','input',renderLulu],['luluStatus','change',renderLulu]].forEach(([id,e,f])=>$(id)?.addEventListener(e,f));
+  document.querySelectorAll('[data-export]').forEach(b=>b.onclick=()=>exportCsv(b.dataset.export));
+  if($('refreshBtn'))$('refreshBtn').onclick=()=>{renderAll();toast('Treasury refreshed')};
 }
+function csvEsc(v){const s=String(v);return /[",\n]/.test(s)?`"${s.replace(/"/g,'""')}"`:s}
+function dl(name,heads,rows){const blob=new Blob([[heads,...rows].map(r=>r.map(csvEsc).join(',')).join('\n')],{type:'text/csv'}),u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),300);toast('CSV exported')}
+function exportCsv(sec){const d=new Date().toISOString().slice(0,10);if(sec==='activity')return state.activityView==='usdc'?dl(`chosen-usdc-activity-${d}.csv`,['time','type','direction','usdc','context','user','reference','status'],renderUsdc()):dl(`chosen-credits-activity-${d}.csv`,['time','type','direction','credits','context','user','reference','status'],renderCreditActivity());if(sec==='credits')return dl(`chosen-credits-${d}.csv`,['time','user','source','change','balance','context','reference','status'],renderCredits());if(sec==='reconciliation')return dl(`chosen-reconciliation-${d}.csv`,['time','scope','internal','observed','difference','severity','result','reference'],renderRecon());if(sec==='lulu')return dl(`chosen-lulu-${d}.csv`,['time','user','token_ids','burned','issued','bonus','tx','status'],renderLulu());if(sec==='rules')return dl(`chosen-rules-${d}.csv`,['updated','rule','old','new','updated_by','reason'],renderRules())}
+function toast(msg){const el=$('toast');if(!el)return;el.textContent=msg;el.classList.add('show');clearTimeout(window.__t);window.__t=setTimeout(()=>el.classList.remove('show'),1700)}
+function renderAll(){renderUsdc();renderCreditActivity();renderCredits();renderRecon();renderLulu();renderRules();if($('lastUpdated'))$('lastUpdated').textContent=new Date().toLocaleString()}
+function demo(){const ts=new Date().toISOString().replace('T',' ').slice(0,19),id=Math.random().toString(36).slice(2,8),user='usr_'+Math.random().toString(36).slice(2,6).toUpperCase(),vals=[100,250,500,1000],v=vals[Math.floor(Math.random()*vals.length)],back=v*CREDIT_BACK_RATE;if(Math.random()<.55){state.usdc.unshift([ts,'Crate Purchase','In',v,`$${v.toLocaleString()} crate opened`,user,'corr_'+id,'Confirmed']);state.creditActivity.unshift([ts,'Credit Back','In',back,`$${v.toLocaleString()} crate · paid with USDC`,user,'corr_'+id,'Confirmed'])}else{state.creditActivity.unshift([ts,'Credit Spend','Out',v,`$${v.toLocaleString()}-equivalent crate purchase`,user,'corr_'+id,'Confirmed']);state.creditActivity.unshift([ts,'Credit Back','In',back,`$${v.toLocaleString()} crate · paid with Credits`,user,'corr_'+id,'Confirmed'])}renderUsdc();renderCreditActivity();if($('lastUpdated'))$('lastUpdated').textContent=new Date().toLocaleString()}
 
-function renderRecon(){
-  const sev=document.getElementById('reconSeverity')?.value||'all', res=document.getElementById('reconStatus')?.value||'all', q=(document.getElementById('reconSearch')?.value||'').toLowerCase();
-  const filtered=state.recon.filter(r=>(sev==='all'||r[5]===sev)&&(res==='all'||r[6]===res)&&(!q||r.join(' ').toLowerCase().includes(q)));
-  document.getElementById('reconTable').innerHTML=filtered.map(r=>`<tr><td class="mono">${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td><td class="${r[4].startsWith('-')?'negative-text':''}">${r[4]}</td><td>${statusBadge(r[5])}</td><td>${statusBadge(r[6])}</td><td class="mono">${r[7]}</td></tr>`).join('');
-  return filtered;
-}
-
-function renderCredits(){
-  const q=(document.getElementById('creditSearch')?.value||'').toLowerCase(), src=document.getElementById('creditSource')?.value||'all';
-  const filtered=state.credits.filter(r=>(src==='all'||r[2]===src)&&(!q||r.join(' ').toLowerCase().includes(q)));
-  document.getElementById('creditTable').innerHTML=filtered.map(r=>`<tr><td class="mono">${r[0]}</td><td class="mono">${r[1]}</td><td>${r[2]}</td><td class="${r[3].startsWith('+')?'positive-text':'negative-text'}">${r[3]}</td><td>${r[4]} cr</td><td class="mono">${r[5]}</td><td>${statusBadge(r[6])}</td></tr>`).join('');
-  const sources=[['Crate cashback',57],['Lulu burns',18],['Promos',16],['Manual adjustments',9]];
-  document.getElementById('creditSourceBars').innerHTML=sources.map(([n,p])=>`<div class="hbar-row"><div class="hbar-label"><b>${n}</b><span>${p}% of lifetime issuance</span></div><div class="hbar-track"><div class="hbar-fill" style="width:${p}%"></div></div></div>`).join('');
-  return filtered;
-}
-
-function maxLuluEmission(n){return Math.floor(n/3)*333+(n%3)*100}
-function renderLulu(){
-  const remaining=LULU_SUPPLY-state.luluBurned, remainingMax=maxLuluEmission(remaining), lost=LULU_LIFETIME_MAX-state.luluEmitted-remainingMax;
-  const bonus=Math.max(0,state.luluEmitted-(state.luluBurned*100));
-  document.getElementById('luluBurned').textContent=state.luluBurned.toLocaleString(); document.getElementById('luluRemaining').textContent=remaining.toLocaleString();
-  document.getElementById('luluEmitted').textContent=state.luluEmitted.toLocaleString(); document.getElementById('creditsLuluIssued').textContent=state.luluEmitted.toLocaleString();
-  document.getElementById('luluMaxRemaining').textContent=remainingMax.toLocaleString(); document.getElementById('overviewLuluRemaining').textContent=remainingMax.toLocaleString()+' cr';
-  document.getElementById('luluBonusIssued').textContent=bonus.toLocaleString(); document.getElementById('luluLostPotential').textContent=Math.max(0,lost).toLocaleString();
-  document.getElementById('luluProgressText').textContent=`${state.luluBurned.toLocaleString()} / ${LULU_SUPPLY.toLocaleString()}`; document.getElementById('luluSupplyProgress').style.width=`${Math.max(.3,(state.luluBurned/LULU_SUPPLY)*100)}%`;
-  const q=(document.getElementById('luluSearch')?.value||'').toLowerCase(), st=document.getElementById('luluStatus')?.value||'all'; const filtered=state.lulu.filter(r=>(st==='all'||r[7]===st)&&(!q||r.join(' ').toLowerCase().includes(q)));
-  document.getElementById('luluTable').innerHTML=filtered.map(r=>`<tr><td class="mono">${r[0]}</td><td class="mono">${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td><td class="positive-text">+${r[4]} cr</td><td>${Number(r[5])?`+${r[5]} cr`:'—'}</td><td class="mono">${r[6]}</td><td>${statusBadge(r[7])}</td></tr>`).join('');
-  return filtered;
-}
-function renderRules(){document.getElementById('rulesTable').innerHTML=state.rules.map(r=>`<tr><td class="mono">${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td><td class="mono">${r[4]}</td><td>${r[5]}</td></tr>`).join('');}
-
-function setLastUpdated(){const d=new Date(); document.getElementById('lastUpdated').textContent=d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});}
-function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1900)}
-
-function csvEscape(v){const s=String(v??'');return /[",\n]/.test(s)?`"${s.replace(/"/g,'""')}"`:s}
-function downloadCSV(name, headers, rows){const content=[headers,...rows].map(r=>r.map(csvEscape).join(',')).join('\n'); const blob=new Blob([content],{type:'text/csv;charset=utf-8;'}); const url=URL.createObjectURL(blob); const a=document.createElement('a');a.href=url;a.download=`chosen-treasury-${name}-${new Date().toISOString().slice(0,10)}.csv`;a.click();URL.revokeObjectURL(url);showToast('CSV exported');}
-
-const exportMap={
-  overview:()=>downloadCSV('overview',['Time','Event','Asset','In','Out','Net','Status'],overviewRows),
-  ledger:()=>downloadCSV('ledger',['Time','Event','Paid with','Amount','Cashback','Cashback asset','User','Correlation ID','Status'],renderLedger()),
-  reconciliation:()=>downloadCSV('reconciliation',['Checked at','Scope','Internal','Observed','Difference','Severity','Result','Reference'],renderRecon()),
-  credits:()=>downloadCSV('credits',['Time','User','Source','Change','Balance after','Reference','Status'],renderCredits()),
-  lulu:()=>downloadCSV('lulu',['Time','User','Token IDs','NFT count','Credits issued','Bonus','Tx hash','Status'],renderLulu()),
-  rules:()=>downloadCSV('rules',['Time','Rule','Previous','New','Changed by','Reason'],state.rules)
-};
-
-document.querySelectorAll('.tab').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.tab-panel').forEach(x=>x.classList.remove('active'));btn.classList.add('active');document.getElementById(btn.dataset.tab).classList.add('active');}));
-document.querySelectorAll('[data-export]').forEach(btn=>btn.addEventListener('click',()=>exportMap[btn.dataset.export]()));
-['ledgerSearch','ledgerAsset','ledgerType','ledgerStatus'].forEach(id=>document.getElementById(id).addEventListener('input',renderLedger));
-['reconSeverity','reconStatus','reconSearch'].forEach(id=>document.getElementById(id).addEventListener('input',renderRecon));
-['creditSearch','creditSource'].forEach(id=>document.getElementById(id).addEventListener('input',renderCredits));
-['luluSearch','luluStatus'].forEach(id=>document.getElementById(id).addEventListener('input',renderLulu));
-document.getElementById('refreshBtn').addEventListener('click',()=>{setLastUpdated();showToast('Treasury refreshed')});
-
-function addLiveDemoEvent(){
-  const now=new Date(); const ts=now.toISOString().slice(0,19).replace('T',' '); const useUsdc=Math.random()>.45; const amounts=useUsdc?[100,250,500]:[100,250,500,1000]; const amount=amounts[Math.floor(Math.random()*amounts.length)]; const cb=Math.round(amount*.8*100)/100; const user='usr_'+Math.random().toString(36).slice(2,6).toUpperCase(); const corr='corr_'+Math.random().toString(16).slice(2,8);
-  state.ledger.unshift([ts,'Crate purchase',useUsdc?'USDC':'Credits',useUsdc?amount.toFixed(2):String(amount),useUsdc?cb.toFixed(2):String(cb),useUsdc?'USDC':'Credits',user,corr,'Confirmed']); if(state.ledger.length>30)state.ledger.pop();
-  setLastUpdated(); renderLedger();
-  const active=document.querySelector('.tab.active')?.dataset.tab;if(active==='ledger')showToast('New ledger event received');
-}
-
-renderOverview();renderLedger();renderRecon();renderCredits();renderLulu();renderRules();setLastUpdated();
-setInterval(setLastUpdated,5000); setInterval(addLiveDemoEvent,15000);
+patchUI();bind();renderAll();setInterval(demo,15000);
