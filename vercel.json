@@ -1,4 +1,15 @@
 {
   "cleanUrls": true,
-  "trailingSlash": false
+  "trailingSlash": false,
+  "rewrites": [
+    {
+      "source": "/",
+      "destination": "/api/treasury-root"
+    }
+  ],
+  "functions": {
+    "api/treasury-root.js": {
+      "includeFiles": "index.html"
+    }
+  }
 }
