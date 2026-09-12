@@ -4,12 +4,33 @@
   "rewrites": [
     {
       "source": "/",
-      "destination": "/api/treasury-root"
+      "destination": "/bootstrap.html"
     }
   ],
-  "functions": {
-    "api/treasury-root.js": {
-      "includeFiles": "index.html"
+  "headers": [
+    {
+      "source": "/",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store, max-age=0" }
+      ]
+    },
+    {
+      "source": "/bootstrap.html",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store, max-age=0" }
+      ]
+    },
+    {
+      "source": "/policy-overrides.js",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store, max-age=0" }
+      ]
+    },
+    {
+      "source": "/policy-fixes.js",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store, max-age=0" }
+      ]
     }
-  }
+  ]
 }
