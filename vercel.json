@@ -4,7 +4,7 @@
   "rewrites": [
     {
       "source": "/",
-      "destination": "/bootstrap.html"
+      "destination": "/index.html"
     }
   ],
   "headers": [
@@ -15,7 +15,13 @@
       ]
     },
     {
-      "source": "/bootstrap.html",
+      "source": "/index.html",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store, max-age=0" }
+      ]
+    },
+    {
+      "source": "/app.js",
       "headers": [
         { "key": "Cache-Control", "value": "no-store, max-age=0" }
       ]
@@ -33,19 +39,7 @@
       ]
     },
     {
-      "source": "/auto-credit-back-final.js",
-      "headers": [
-        { "key": "Cache-Control", "value": "no-store, max-age=0" }
-      ]
-    },
-    {
-      "source": "/finance-live-data.js",
-      "headers": [
-        { "key": "Cache-Control", "value": "no-store, max-age=0" }
-      ]
-    },
-    {
-      "source": "/dashboard-structure.js",
+      "source": "/styles.css",
       "headers": [
         { "key": "Cache-Control", "value": "no-store, max-age=0" }
       ]
