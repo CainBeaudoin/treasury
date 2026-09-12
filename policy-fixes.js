@@ -7,9 +7,10 @@
   const STOCK_PACK_PRICE = 50;
   const STOCK_MAX_PRIZE = 1000;
   const STOCK_LIQUIDITY_RESERVE = STOCK_MAX_PRIZE * 10;
+  const STOCK_PACK_PAYMENT_ASSET = 'USDC';
   const CREDIT_OPENING_SUPPLY = 83573;
   const PERIOD_LABEL = 'Q3 2026 · through Sep 12';
-  const UI_VERSION = 'finance-v4-qa';
+  const UI_VERSION = 'finance-v5-payment-rails';
   let activePayoutView = 'odto';
 
   const catalog = [
@@ -114,7 +115,7 @@
     const rows=[];
     stockExecutions.forEach(x=>{
       const [ts,ticker,pack,cost,,ref]=x;
-      rows.push([ts,'Stock Pack Purchase','In',pack,`$${pack} stock pack opened`,ticker,ref,'Confirmed']);
+      rows.push([ts,'Stock Pack Purchase','In',pack,`$${pack} cash/USDC stock pack opened`,ticker,ref,'Confirmed']);
       rows.push([ts,'Stock Acquisition','Out',cost,`${ticker} position purchased at execution value`,ticker,ref,'Confirmed']);
     });
     const existing=new Set(state.usdc.map(r=>`${r[6]}|${r[1]}`));
@@ -125,10 +126,10 @@
   function syncBrand() {
     document.title='Chosen Finance';
     const meta=document.querySelector('meta[name="description"]');
-    if(meta) meta.content='Chosen Finance demo — USDC cash flow, Credits, sneaker fulfillment, stock-pack payouts, reserves and distributable profit.';
+    if(meta) meta.content='Chosen Finance demo — USDC cash flow, crate-only Credits, cash-only stock packs, sneaker fulfillment, reserves and distributable profit.';
     const subbrand=document.querySelector('.subbrand');if(subbrand) subbrand.textContent='Finance';
     const h1=document.querySelector('.page-head h1');if(h1) h1.textContent='Finance & Treasury';
-    const pageCopy=document.querySelector('.page-head p');if(pageCopy) pageCopy.textContent='Cash, obligations, Credits, sneaker fulfillment, stock executions and distributable profit in one operating view.';
+    const pageCopy=document.querySelector('.page-head p');if(pageCopy) pageCopy.textContent='Cash, obligations, crate-only Credits, cash-only stock packs, sneaker fulfillment and distributable profit in one operating view.';
     const nav=document.querySelector('.tabs');if(nav) nav.setAttribute('aria-label','Finance sections');
     const live=document.querySelector('.live-pill span:last-child');if(live) live.textContent='Demo snapshot';
     const asOf=document.querySelector('.as-of-card small');if(asOf) asOf.textContent='Snapshot model · refresh to recompute';
@@ -231,7 +232,7 @@
         <article class="metric-card"><div class="metric-label">Safe withdrawal</div><div class="metric-value" id="rpWithdrawable">$0</div><div class="metric-foot">Lower of operating profit and excess treasury liquidity</div></article>
       </div>
       <div class="finance-grid">
-        <article class="panel"><div class="panel-head"><div><h3>Revenue by Source</h3><p>Stock-pack revenue is net of the position acquisition cost.</p></div></div><table class="finance-breakdown"><thead><tr><th>Source</th><th>Gross</th><th>Earned</th></tr></thead><tbody id="rpSources"></tbody></table></article>
+        <article class="panel"><div class="panel-head"><div><h3>Revenue by Source</h3><p>Stock-pack revenue is net of the position acquisition cost; stock-pack gross inflow is cash/USDC only.</p></div></div><table class="finance-breakdown"><thead><tr><th>Source</th><th>Gross</th><th>Earned</th></tr></thead><tbody id="rpSources"></tbody></table></article>
         <article class="panel"><div class="panel-head"><div><h3>Profit & Liquidity Bridge</h3><p>Profit and cash safety are calculated independently, then the lower number controls.</p></div></div><table class="finance-breakdown"><tbody id="rpWaterfall"></tbody></table></article>
       </div>`;
   }
@@ -252,18 +253,18 @@
         <article class="panel table-panel"><div class="panel-head"><div><h3>ODTO Payout Activity</h3><p>Product-level acquisition cost and payment state.</p></div></div><div class="table-wrap"><table><thead><tr><th>Product</th><th>ODTO item</th><th>List CAD</th><th>70% cost</th><th>Qty</th><th>Unit USDC</th><th>Total payout</th><th>Status</th></tr></thead><tbody id="spTable"></tbody></table></div></article>
       </div>
       <div id="stocksPayoutView" class="payout-view${odtoActive?'':' active'}">
-        <div class="supplier-source-note"><b>Stock-pack model:</b> every pack brings in ${usd(STOCK_PACK_PRICE)}. The winning position is purchased immediately at execution value. There is no cashback liability because the user already receives a liquid position. Demo reserve = 10 × the ${usd(STOCK_MAX_PRIZE)} top prize.</div>
+        <div class="supplier-source-note"><b>Cash-only stock packs:</b> every stock pack is purchased with cash/USDC. Credits can never open a stock pack, and stock packs do not emit Crate Bonus or any other Credits. Each winning position is then purchased immediately at its execution value. There is no cashback liability because the user already receives a liquid position. Demo reserve = 10 × the ${usd(STOCK_MAX_PRIZE)} top prize.</div>
         <div class="finance-kpis">
-          <article class="metric-card tone-positive"><div class="metric-label">Q3-to-date pack inflow</div><div class="metric-value" id="stockInflow">$0</div><div class="metric-foot">${stockQuarter.packs} packs × ${usd(STOCK_PACK_PRICE)}</div></article>
+          <article class="metric-card tone-positive"><div class="metric-label">Q3-to-date cash inflow</div><div class="metric-value" id="stockInflow">$0</div><div class="metric-foot">${stockQuarter.packs} cash packs × ${usd(STOCK_PACK_PRICE)}</div></article>
           <article class="metric-card tone-negative"><div class="metric-label">Stock acquisitions</div><div class="metric-value" id="stockOutflow">$0</div><div class="metric-foot">Positions bought at execution value</div></article>
-          <article class="metric-card"><div class="metric-label">Net stock-pack margin</div><div class="metric-value" id="stockMargin">$0</div><div class="metric-foot">Pack inflow − acquisition cost</div></article>
+          <article class="metric-card"><div class="metric-label">Net stock-pack margin</div><div class="metric-value" id="stockMargin">$0</div><div class="metric-foot">Cash inflow − acquisition cost</div></article>
           <article class="metric-card tone-warning"><div class="metric-label">Liquidity reserve</div><div class="metric-value" id="stockReserve">$0</div><div class="metric-foot">10 simultaneous top-tier wins</div></article>
         </div>
         <div class="finance-grid">
           <article class="panel"><div class="panel-head"><div><h3>Q3 Outcome Mix</h3><p>Odds are concentrated toward lower-cost outcomes.</p></div></div><table class="finance-breakdown"><thead><tr><th>Tier</th><th>Packs</th><th>Odds</th><th>Avg cost</th><th>Outflow</th></tr></thead><tbody id="stockTierTable"></tbody></table></article>
-          <article class="panel"><div class="panel-head"><div><h3>Accounting</h3><p>One pack creates one inflow and one immediate acquisition outflow.</p></div></div><table class="finance-breakdown"><tbody><tr><td>Pack purchase</td><td class="positive-text">+${usd(STOCK_PACK_PRICE)}</td></tr><tr><td>Example $28 position</td><td class="negative-text">−$28.00</td></tr><tr><td>Example pack P&amp;L</td><td class="positive-text">+$22.00</td></tr><tr><td>Example $1,000 position</td><td class="negative-text">−$1,000.00</td></tr><tr><td>Example pack P&amp;L</td><td class="negative-text">−$950.00</td></tr></tbody></table></article>
+          <article class="panel"><div class="panel-head"><div><h3>Accounting</h3><p>One cash pack creates one USDC inflow and one immediate acquisition outflow.</p></div></div><table class="finance-breakdown"><tbody><tr><td>Funding rail</td><td class="info-text">Cash / USDC only</td></tr><tr><td>Credits allowed</td><td class="negative-text">No</td></tr><tr><td>Crate Bonus</td><td class="negative-text">None</td></tr><tr><td>Pack purchase</td><td class="positive-text">+${usd(STOCK_PACK_PRICE)}</td></tr><tr><td>Example $28 position</td><td class="negative-text">−$28.00</td></tr><tr><td>Example pack P&amp;L</td><td class="positive-text">+$22.00</td></tr><tr><td>Example $1,000 position</td><td class="negative-text">−$1,000.00</td></tr><tr><td>Example pack P&amp;L</td><td class="negative-text">−$950.00</td></tr></tbody></table></article>
         </div>
-        <article class="panel table-panel"><div class="panel-head"><div><h3>Recent Stock Executions</h3><p>Payout equals the position cost at execution, not a fixed percentage of the pack.</p></div></div><div class="table-wrap"><table><thead><tr><th>Time</th><th>Ticker</th><th>Pack inflow</th><th>Position cost</th><th>Pack P&amp;L</th><th>Reference</th><th>Status</th></tr></thead><tbody id="stockExecutionTable"></tbody></table></div></article>
+        <article class="panel table-panel"><div class="panel-head"><div><h3>Recent Stock Executions</h3><p>Payout equals the position cost at execution, not a fixed percentage of the pack.</p></div></div><div class="table-wrap"><table><thead><tr><th>Time</th><th>Ticker</th><th>Cash pack inflow</th><th>Position cost</th><th>Pack P&amp;L</th><th>Reference</th><th>Status</th></tr></thead><tbody id="stockExecutionTable"></tbody></table></div></article>
       </div>`;
     p.querySelectorAll('.payout-tab').forEach(btn=>btn.addEventListener('click',()=>{
       activePayoutView=btn.dataset.payoutView;
@@ -274,9 +275,9 @@
   }
 
   function streamlineExistingTabs(){
-    const activityIntro=document.querySelector('#activity .section-intro p');if(activityIntro)activityIntro.textContent='Transaction logs only. Summary KPIs live in Overview, Revenue Pool and Payouts.';
-    const creditsIntro=document.querySelector('#credits .section-intro p');if(creditsIntro)creditsIntro.textContent='Credit supply, new emissions and day-365 settlement exposure. Transaction detail stays in Activity.';
-    const reconIntro=document.querySelector('#reconciliation .section-intro p');if(reconIntro)reconIntro.textContent='Exceptions first: wallet, payout and finance-model checks in one place.';
+    const activityIntro=document.querySelector('#activity .section-intro p');if(activityIntro)activityIntro.textContent='Transaction logs only. Stock packs appear only in USDC because they are cash-only; Credits are reserved for crate openings.';
+    const creditsIntro=document.querySelector('#credits .section-intro p');if(creditsIntro)creditsIntro.textContent='Credits can only open crates. They never fund stock packs; this page tracks crate-related supply, emissions and day-365 settlement exposure.';
+    const reconIntro=document.querySelector('#reconciliation .section-intro p');if(reconIntro)reconIntro.textContent='Exceptions first: wallet, payout, payment-rail and finance-model checks in one place.';
     const luluIntro=document.querySelector('#lulu .section-intro p');if(luluIntro)luluIntro.textContent='Burned supply, remaining capacity and burn history.';
     const rulesIntro=document.querySelector('#rules .section-intro p');if(rulesIntro)rulesIntro.textContent='Seven operating rules that materially affect balances, payouts and profit.';
     const type=document.getElementById('usdcType');
@@ -293,7 +294,7 @@
         const value=card.querySelector('.metric-value');
         if(value)value.textContent=credits(current);
         const foot=card.querySelector('.metric-foot');
-        if(foot)foot.textContent='Derived from opening supply + ledger net change';
+        if(foot)foot.textContent='Derived from opening supply + crate/credit ledger';
       }
     });
   }
@@ -301,11 +302,11 @@
   function syncRules(){
     const grid=document.querySelector('#rules .rules-grid');if(!grid)return;
     const rules=[
-      ['Credits & Crates','Non-cash economy','Credits have no direct treasury cash value. Credit-funded crates remove entry Credits; every crate emits a separate 5% Crate Bonus.','info'],
+      ['Credits & Crates','Crates only','Credits have no direct treasury cash value and may only be spent on collectible crates. They can never open stock packs. Credit-funded crates remove entry Credits; every crate emits a separate 5% Crate Bonus.','info'],
       ['Sneaker Settlement','80% of prize FMV','Credits-funded immediate settlement pays Credits; USDC-funded immediate settlement pays USDC. The basis is prize FMV, not crate entry.','positive'],
       ['Vault Lifecycle','365 days → Credits','During the window: list, redeem, or liquidate at 70% × min(initial FMV, live FMV). At day 365 unresolved items automatically settle in Credits.','warning'],
       ['Physical Sneakers','Actual supplier cost','Physical redemption creates real USDC outflow at acquisition cost. Demo ODTO cost is modeled at 70% of listed CAD.','negative'],
-      ['Stock Packs',`${usd(STOCK_PACK_PRICE)} in · live cost out`,'The stock position is purchased immediately at execution value. There is no cashback. Pack P&L is pack price minus acquisition cost, so rare wins require a dedicated liquidity reserve.','warning'],
+      ['Stock Packs',`${usd(STOCK_PACK_PRICE)} cash only · live cost out`,'Stock packs are funded only with cash/USDC. Credits cannot be used, no Crate Bonus is emitted, and the winning position is purchased immediately at execution value. Pack P&L is cash pack price minus acquisition cost.','warning'],
       ['Revenue & Reserves','Profit + liquidity test','Operating profit is revenue less paid ODTO cost. Safe withdrawal is capped by both operating profit and treasury cash remaining after hard obligations and reserves.','positive'],
       ['Marketplace, Shipping & Lulu','Net economics','Marketplace principal is not revenue; only the fee is. Shipping inflow and carrier cost stay separate. Lulu emits 100 Credits each or 333 per three.','info']
     ];
@@ -319,20 +320,30 @@
     const supplierCatalogUsd=catalog.reduce((a,x)=>a+x.totalUsdc,0);
     const reserveRecalc=CASHBACK_RESERVE+t.supplierOpen+t.fulfillmentReserve+STOCK_LIQUIDITY_RESERVE+OPERATING_BUFFER;
     const safeRecalc=Math.max(0,Math.min(t.operatingProfit,Math.max(0,TREASURY_USDC-HARD_USDC_OBLIGATIONS-reserveRecalc)));
+    const stockCashPurchaseRows=state.usdc.filter(r=>r[1]==='Stock Pack Purchase'&&r[2]==='In').length;
+    const stockAcquisitionRows=state.usdc.filter(r=>r[1]==='Stock Acquisition'&&r[2]==='Out').length;
+    const invalidStockCreditRows=state.creditActivity.filter(r=>String(r[6]||'').startsWith('stk_')||String(r[1]||'').toLowerCase().includes('stock pack')||String(r[4]||'').toLowerCase().includes('stock pack')).length;
+    const stockCreditBonusRows=state.creditActivity.filter(r=>r[1]==='Crate Bonus'&&String(r[6]||'').startsWith('stk_')).length;
     const checks=[
-      ['Stock pack inflow',stockQuarter.inflow,stockQuarter.packs*STOCK_PACK_PRICE,'qa_stock_inflow'],
-      ['Stock acquisition cost',stockQuarter.outflow,stockTiers.reduce((a,x)=>a+x.totalCost,0),'qa_stock_cost'],
-      ['Stock pack margin',stockQuarter.margin,stockQuarter.inflow-stockQuarter.outflow,'qa_stock_margin'],
-      ['ODTO contract total',t.supplierContractUsd,supplierCatalogUsd,'qa_odto_contract'],
-      ['Required reserve',t.requiredReserve,reserveRecalc,'qa_required_reserve'],
-      ['Safe withdrawal',t.withdrawableProfit,safeRecalc,'qa_safe_withdrawal']
+      {label:'Stock pack inflow',internal:stockQuarter.inflow,observed:stockQuarter.packs*STOCK_PACK_PRICE,ref:'qa_stock_inflow',format:'usd'},
+      {label:'Stock acquisition cost',internal:stockQuarter.outflow,observed:stockTiers.reduce((a,x)=>a+x.totalCost,0),ref:'qa_stock_cost',format:'usd'},
+      {label:'Stock pack margin',internal:stockQuarter.margin,observed:stockQuarter.inflow-stockQuarter.outflow,ref:'qa_stock_margin',format:'usd'},
+      {label:'Stock cash purchase rows',internal:stockCashPurchaseRows,observed:stockExecutions.length,ref:'qa_stock_cash_rows',format:'count'},
+      {label:'Stock acquisition rows',internal:stockAcquisitionRows,observed:stockExecutions.length,ref:'qa_stock_acquisition_rows',format:'count'},
+      {label:'Stock packs funded by Credits',internal:invalidStockCreditRows,observed:0,ref:'qa_stock_cash_only',format:'count'},
+      {label:'Stock-pack Credit emissions',internal:stockCreditBonusRows,observed:0,ref:'qa_stock_no_credit_bonus',format:'count'},
+      {label:'ODTO contract total',internal:t.supplierContractUsd,observed:supplierCatalogUsd,ref:'qa_odto_contract',format:'usd'},
+      {label:'Required reserve',internal:t.requiredReserve,observed:reserveRecalc,ref:'qa_required_reserve',format:'usd'},
+      {label:'Safe withdrawal',internal:t.withdrawableProfit,observed:safeRecalc,ref:'qa_safe_withdrawal',format:'usd'}
     ];
     state.recon=state.recon.filter(r=>!String(r[7]||'').startsWith('qa_'));
     const ts=new Date().toISOString().replace('T',' ').slice(0,19);
-    checks.reverse().forEach(([label,internal,observed,ref])=>{
-      const diff=num(observed)-num(internal);
-      const matched=nearlyEqual(internal,observed);
-      state.recon.unshift([ts,label,usd(internal),usd(observed),matched?'$0.00':`${diff>=0?'+':'−'}${usd(Math.abs(diff))}`,matched?'Info':'High',matched?'Matched':'Mismatch',ref]);
+    checks.reverse().forEach(check=>{
+      const diff=num(check.observed)-num(check.internal);
+      const matched=nearlyEqual(check.internal,check.observed);
+      const formatValue=check.format==='count' ? v=>`${num(v).toLocaleString()} rows` : usd;
+      const diffText=matched ? (check.format==='count'?'0 rows':'$0.00') : check.format==='count' ? `${diff>=0?'+':'−'}${Math.abs(diff).toLocaleString()} rows` : `${diff>=0?'+':'−'}${usd(Math.abs(diff))}`;
+      state.recon.unshift([ts,check.label,formatValue(check.internal),formatValue(check.observed),diffText,matched?'Info':'High',matched?'Matched':'Mismatch',check.ref]);
     });
   }
 
@@ -434,6 +445,7 @@
     syncReconSummary();
     renderFinance();
     document.body.dataset.financeUi=UI_VERSION;
+    document.body.dataset.stockPackPayment=STOCK_PACK_PAYMENT_ASSET;
   }
 
   const priorRenderAll=renderAll;
