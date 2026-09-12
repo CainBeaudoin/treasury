@@ -3,9 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Chosen Treasury demo — USDC cash flow, Credits activity, Lulu emissions, reconciliation and treasury rules." />
+  <meta name="description" content="Chosen Treasury demo — USDC cash flow, Credits activity, pending prize exposure, Lulu emissions and treasury rules." />
   <title>Chosen Treasury</title>
   <link rel="stylesheet" href="./styles.css" />
+  <style>
+    .subsection-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin:22px 0 10px}.subsection-head h3{margin:0 0 4px;font-size:15px}.subsection-head p{margin:0;color:var(--muted);font-size:11px;line-height:1.45}.exposure-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:12px}.exposure-strip>div{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:11px 13px;display:grid;gap:5px}.exposure-strip span{font-size:10px;color:var(--muted)}.exposure-strip strong{font-size:17px}.badge.vaulted{color:var(--blue)}.rules-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.rule-card{padding:10px 12px;border-radius:11px}.rule-card span{margin-bottom:3px}.rule-card strong{font-size:17px;line-height:1.15}.rule-card p{margin-top:4px;line-height:1.28}.rule-note{padding:10px 12px;line-height:1.35}@media(max-width:1180px){.rules-grid{grid-template-columns:repeat(3,1fr)}.exposure-strip{grid-template-columns:repeat(2,1fr)}}@media(max-width:820px){.rules-grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:720px){.subsection-head{align-items:stretch;flex-direction:column}.exposure-strip,.rules-grid{grid-template-columns:1fr}}
+  </style>
 </head>
 <body>
   <div class="app-shell">
@@ -16,7 +19,7 @@
 
     <main class="main">
       <section class="page-head">
-        <div><div class="eyebrow">FINANCIAL OPERATIONS</div><h1>Company Treasury</h1><p>Separate real-money USDC movement from the Credits economy, while keeping the full company picture easy to audit.</p></div>
+        <div><div class="eyebrow">FINANCIAL OPERATIONS</div><h1>Company Treasury</h1><p>Separate real USDC movement from the Credits economy, and track exactly when theoretical prize value becomes a real company cash cost.</p></div>
         <div class="as-of-card"><span>Last update</span><strong id="lastUpdated">—</strong><small>Demo feed refreshes automatically</small></div>
       </section>
 
@@ -30,73 +33,79 @@
       </nav>
 
       <section id="overview" class="tab-panel active">
-        <div class="section-intro"><div><h2>Overview</h2><p>Company cash position, credit obligations, and the major flows affecting Chosen.</p></div><div class="action-row"><select class="control"><option>Q3 2026</option><option>Q2 2026</option><option>YTD 2026</option><option>All time</option></select><button class="export-btn" data-export="overview">Export CSV</button></div></div>
-        <div class="metric-grid overview-metrics">
-          <article class="metric-card accent-usdc"><div class="metric-label">Treasury USDC</div><div class="metric-value">$128,440.22</div><div class="metric-foot positive">↑ 8.4% this quarter</div></article>
-          <article class="metric-card"><div class="metric-label">Available USDC</div><div class="metric-value">$97,159.82</div><div class="metric-foot">After tracked USDC obligations</div></article>
-          <article class="metric-card accent-credit"><div class="metric-label">Credits outstanding</div><div class="metric-value">84,920</div><div class="metric-foot">Held by users</div></article>
-          <article class="metric-card"><div class="metric-label">New credit emissions</div><div class="metric-value">18,642</div><div class="metric-foot">Crate Bonus + Lulu + Promotions</div></article>
+        <div class="section-intro"><div><h2>Overview</h2><p>Real cash, non-cash Credits, and pending item exposure.</p></div><div class="action-row"><select class="control"><option>Q3 2026</option><option>Q2 2026</option><option>YTD 2026</option><option>All time</option></select><button class="export-btn" data-export="overview">Export CSV</button></div></div>
+        <div class="metric-grid overview-metrics five">
+          <article class="metric-card accent-usdc"><div class="metric-label">Treasury USDC</div><div class="metric-value">$128,440.22</div><div class="metric-foot">Actual cash held</div></article>
+          <article class="metric-card"><div class="metric-label">Hard USDC obligations</div><div class="metric-value">$31,280.40</div><div class="metric-foot">Already-realized obligations</div></article>
+          <article class="metric-card"><div class="metric-label">Pending claim reserve</div><div class="metric-value" id="overviewPendingReserve">$0</div><div class="metric-foot">Planning reserve if vaulted items ship</div></article>
+          <article class="metric-card"><div class="metric-label">Unreserved USDC</div><div class="metric-value" id="overviewAvailableUsdc">$0</div><div class="metric-foot">Treasury − obligations − reserve</div></article>
+          <article class="metric-card accent-credit"><div class="metric-label">Credits in circulation</div><div class="metric-value">84,920</div><div class="metric-foot">Non-cash platform units</div></article>
         </div>
         <div class="health-strip"><div class="health-title">Treasury health</div><div class="health-item ok"><span></span>USDC wallet healthy</div><div class="health-item ok"><span></span>Credits activity healthy</div><div class="health-item warn"><span></span>1 reconciliation mismatch</div><div class="health-item ok"><span></span>0 stuck transactions</div></div>
         <div class="two-col">
           <article class="panel"><div class="panel-head"><div><h3>USDC flow this quarter</h3><p>Gross incoming and outgoing USDC by month.</p></div></div><div class="bar-chart" id="cashflowChart"></div></article>
-          <article class="panel"><div class="panel-head"><div><h3>What each flow means</h3><p>Not every inflow is revenue and not every credit inflow is an emission.</p></div></div><div class="mix-list"><div class="mix-row"><div><strong>Crate purchases</strong><span>USDC collected from crate purchases</span></div><b>Inflow</b></div><div class="mix-row"><div><strong>Cashback</strong><span>USDC returned when a user cashes out</span></div><b>Outflow</b></div><div class="mix-row"><div><strong>Shipping</strong><span>Collected for fulfillment; tracked separately from revenue</span></div><b>Pass-through</b></div><div class="mix-row"><div><strong>Marketplace fee</strong><span>Only Chosen's fee is company revenue</span></div><b>Revenue</b></div></div></article>
+          <article class="panel"><div class="panel-head"><div><h3>How theoretical value becomes cash</h3><p>Credits and vaulted prizes remain non-cash until a real settlement occurs.</p></div></div><div class="mix-list"><div class="mix-row"><div><strong>Credit-funded crate</strong><span>Credits are removed; no USDC moves.</span></div><b>Non-cash</b></div><div class="mix-row"><div><strong>Credit Back</strong><span>80% of prize FMV returned as Credits.</span></div><b>Non-cash</b></div><div class="mix-row"><div><strong>Vaulted item</strong><span>Creates pending fallback and fulfillment exposure.</span></div><b>Pending</b></div><div class="mix-row"><div><strong>Item redemption</strong><span>Actual item cost basis becomes USDC outflow.</span></div><b>Cash outflow</b></div></div></article>
         </div>
-        <article class="panel table-panel"><div class="panel-head"><div><h3>Recent company movements</h3><p>Latest material activity across USDC and Credits.</p></div></div><div class="table-wrap"><table><thead><tr><th>Time</th><th>Area</th><th>Event</th><th>Direction</th><th>Amount</th><th>Reference</th></tr></thead><tbody id="overviewTable"></tbody></table></div></article>
+        <article class="panel table-panel"><div class="panel-head"><div><h3>Recent company movements</h3><p>Latest material movements across USDC and Credits.</p></div></div><div class="table-wrap"><table><thead><tr><th>Time</th><th>Area</th><th>Event</th><th>Direction</th><th>Amount</th><th>Reference</th></tr></thead><tbody id="overviewTable"></tbody></table></div></article>
       </section>
 
       <section id="activity" class="tab-panel">
-        <div class="section-intro"><div><h2>Activity</h2><p>USDC and Credits have separate logs because they represent different economies.</p></div><button class="export-btn" data-export="activity">Export CSV</button></div>
+        <div class="section-intro"><div><h2>Activity</h2><p>USDC and Credits stay in separate logs because they are different economies.</p></div><button class="export-btn" data-export="activity">Export CSV</button></div>
         <div class="segmented" role="tablist"><button class="segment active" data-activity="usdc">USDC</button><button class="segment" data-activity="credits">Credits</button></div>
 
         <div id="usdcActivity" class="activity-view active">
-          <div class="metric-grid compact">
+          <div class="metric-grid compact five">
             <article class="metric-card"><div class="metric-label">Crate purchase inflow</div><div class="metric-value" id="usdcPurchases">$0</div><div class="metric-foot">Gross USDC collected</div></article>
-            <article class="metric-card"><div class="metric-label">Cashback outflow</div><div class="metric-value" id="usdcCashback">$0</div><div class="metric-foot">USDC returned to users</div></article>
-            <article class="metric-card"><div class="metric-label">Shipping collected</div><div class="metric-value" id="shippingCollected">$0</div><div class="metric-foot">Fulfillment/pass-through inflow</div></article>
+            <article class="metric-card"><div class="metric-label">Cashback outflow</div><div class="metric-value" id="usdcCashback">$0</div><div class="metric-foot">80% of prize FMV</div></article>
+            <article class="metric-card"><div class="metric-label">Item redemption</div><div class="metric-value" id="itemRedemptions">$0</div><div class="metric-foot">Actual product cost paid by Chosen</div></article>
+            <article class="metric-card"><div class="metric-label">Shipping net</div><div class="metric-value" id="shippingNet">$0</div><div class="metric-foot">Collected less carrier cost</div></article>
             <article class="metric-card"><div class="metric-label">Marketplace fees</div><div class="metric-value" id="marketFees">$0</div><div class="metric-foot">Chosen fee revenue only</div></article>
           </div>
-          <div class="filters"><input id="usdcSearch" class="control grow" placeholder="Search user, reference or note…"/><select id="usdcType" class="control"><option value="all">All USDC activity</option><option>Crate Purchase</option><option>Cashback</option><option>Shipping</option><option>Marketplace Fee</option></select><select id="usdcStatus" class="control"><option value="all">All statuses</option><option>Confirmed</option><option>Pending</option></select></div>
+          <div class="filters"><input id="usdcSearch" class="control grow" placeholder="Search user, reference or note…"/><select id="usdcType" class="control"><option value="all">All USDC activity</option><option>Crate Purchase</option><option>Cashback</option><option>Item Redemption</option><option>Shipping Collected</option><option>Shipping Cost</option><option>Marketplace Fee</option></select><select id="usdcStatus" class="control"><option value="all">All statuses</option><option>Confirmed</option><option>Pending</option></select></div>
           <article class="panel table-panel"><div class="table-wrap"><table><thead><tr><th>Time</th><th>Type</th><th>Flow</th><th>USDC</th><th>Description</th><th>User</th><th>Reference</th><th>Status</th></tr></thead><tbody id="usdcTable"></tbody></table></div></article>
         </div>
 
         <div id="creditsActivity" class="activity-view">
-          <div class="distinction-callout"><strong>Credit Back ≠ Crate Bonus.</strong><span><b>Credit Back</b> is the larger return of Credits when a Credits-funded crate is cashed out. <b>Crate Bonus</b> is the separate 5% bonus emitted on every crate, regardless of whether it was paid with USDC or Credits.</span></div>
+          <div class="distinction-callout"><strong>Credits are non-cash units.</strong><span><b>Credit Back</b> is 80% of the prize's FMV, not the crate entry. Spend 100 Credits and hit an $80 prize: 64 Credits back. Hit a $1,000 prize: 800 Credits back. <b>Crate Bonus</b> remains a separate 5% bonus on every crate.</span></div>
           <div class="metric-grid compact five">
-            <article class="metric-card"><div class="metric-label">Credit spend</div><div class="metric-value" id="creditSpendMetric">0</div><div class="metric-foot">Credits used to buy crates</div></article>
-            <article class="metric-card accent-credit"><div class="metric-label">Credit Back</div><div class="metric-value" id="creditBackMetric">0</div><div class="metric-foot">Returned on Credits-funded cashouts</div></article>
+            <article class="metric-card"><div class="metric-label">Credit spend</div><div class="metric-value" id="creditSpendMetric">0</div><div class="metric-foot">Credits removed for crate entries</div></article>
+            <article class="metric-card accent-credit"><div class="metric-label">Credit Back</div><div class="metric-value" id="creditBackMetric">0</div><div class="metric-foot">80% of prize FMV returned</div></article>
             <article class="metric-card"><div class="metric-label">Crate Bonus</div><div class="metric-value" id="crateBonusMetric">0</div><div class="metric-foot">5% on every crate</div></article>
-            <article class="metric-card"><div class="metric-label">Lulu emissions</div><div class="metric-value" id="luluActivityMetric">0</div><div class="metric-foot">Credits from NFT burns</div></article>
-            <article class="metric-card"><div class="metric-label">Promotional</div><div class="metric-value" id="promoMetric">0</div><div class="metric-foot">Campaign grants</div></article>
+            <article class="metric-card"><div class="metric-label">Net credit change</div><div class="metric-value" id="netCreditMetric">0</div><div class="metric-foot">All inflows − Credit Spend</div></article>
+            <article class="metric-card"><div class="metric-label">Pending Credit Back</div><div class="metric-value" id="pendingCreditMetric">0</div><div class="metric-foot">Vaulted Credits-funded prizes</div></article>
           </div>
-          <div class="filters"><input id="creditActivitySearch" class="control grow" placeholder="Search user, reference or note…"/><select id="creditActivityType" class="control"><option value="all">All Credits activity</option><option>Credit Spend</option><option>Credit Back</option><option>Crate Bonus</option><option>Lulu Emission</option><option>Promotional Run</option></select><select id="creditActivityStatus" class="control"><option value="all">All statuses</option><option>Confirmed</option><option>Pending</option></select></div>
+          <div class="filters"><input id="creditActivitySearch" class="control grow" placeholder="Search user, reference or note…"/><select id="creditActivityType" class="control"><option value="all">All Credits activity</option><option>Credit Spend</option><option>Credit Back</option><option>Crate Bonus</option><option>Lulu Emission</option><option>Promotional Run</option><option>Expiry Credit Back</option></select><select id="creditActivityStatus" class="control"><option value="all">All statuses</option><option>Confirmed</option><option>Pending</option></select></div>
           <article class="panel table-panel"><div class="table-wrap"><table><thead><tr><th>Time</th><th>Type</th><th>Flow</th><th>Credits</th><th>Description</th><th>User</th><th>Reference</th><th>Status</th></tr></thead><tbody id="creditActivityTable"></tbody></table></div></article>
         </div>
       </section>
 
       <section id="reconciliation" class="tab-panel">
-        <div class="section-intro"><div><h2>Reconciliation</h2><p>Compare the internal records against wallets and system sources of truth.</p></div><button class="export-btn" data-export="reconciliation">Export CSV</button></div>
+        <div class="section-intro"><div><h2>Reconciliation</h2><p>Compare internal records against wallets and system sources of truth.</p></div><button class="export-btn" data-export="reconciliation">Export CSV</button></div>
         <div class="metric-grid compact"><article class="metric-card"><div class="metric-label">Wallets checked</div><div class="metric-value">27</div></article><article class="metric-card"><div class="metric-label">Mismatches</div><div class="metric-value warning">1</div></article><article class="metric-card"><div class="metric-label">Stuck</div><div class="metric-value">0</div></article><article class="metric-card"><div class="metric-label">Last run</div><div class="metric-value small-value">2.1s</div></article></div>
         <div class="filters"><input id="reconSearch" class="control grow" placeholder="Search scope or reference…"/><select id="reconResult" class="control"><option value="all">All results</option><option>Matched</option><option>Mismatch</option></select></div>
         <article class="panel table-panel"><div class="table-wrap"><table><thead><tr><th>Checked at</th><th>Scope</th><th>Internal</th><th>Observed</th><th>Difference</th><th>Severity</th><th>Result</th><th>Reference</th></tr></thead><tbody id="reconTable"></tbody></table></div></article>
       </section>
 
       <section id="credits" class="tab-panel">
-        <div class="section-intro"><div><h2>Credits</h2><p>Track the Credits economy without combining returned Credit Back with newly emitted bonus Credits.</p></div><button class="export-btn" data-export="credits">Export CSV</button></div>
+        <div class="section-intro"><div><h2>Credits</h2><p>Credits are platform units, not cash. Track supply movement and prizes that could later become Credit Back or a real USDC fulfillment cost.</p></div><button class="export-btn" data-export="credits">Export CSV</button></div>
         <div class="metric-grid compact five">
-          <article class="metric-card accent-credit"><div class="metric-label">Outstanding</div><div class="metric-value">84,920</div><div class="metric-foot">Current user balances</div></article>
-          <article class="metric-card"><div class="metric-label">New emissions</div><div class="metric-value">18,642</div><div class="metric-foot">Bonus + Lulu + Promotional</div></article>
-          <article class="metric-card"><div class="metric-label">Credit Back returned</div><div class="metric-value">61,440</div><div class="metric-foot">Tracked separately from emissions</div></article>
-          <article class="metric-card"><div class="metric-label">Credits spent</div><div class="metric-value">333,686</div><div class="metric-foot">Used for crates</div></article>
-          <article class="metric-card"><div class="metric-label">Lulu-issued</div><div class="metric-value" id="creditsLuluIssued">4,096</div><div class="metric-foot">NFT burn emissions</div></article>
+          <article class="metric-card accent-credit"><div class="metric-label">Credits in circulation</div><div class="metric-value">84,920</div><div class="metric-foot">No direct USD value assigned</div></article>
+          <article class="metric-card"><div class="metric-label">Net credit change</div><div class="metric-value" id="creditsNetChange">0</div><div class="metric-foot">Inflows minus Credit Spend</div></article>
+          <article class="metric-card"><div class="metric-label">New emissions</div><div class="metric-value" id="newEmissionMetric">0</div><div class="metric-foot">Crate Bonus + Lulu + Promotions</div></article>
+          <article class="metric-card"><div class="metric-label">Credit Back returned</div><div class="metric-value" id="creditsBackReturned">0</div><div class="metric-foot">Outcome settlement, not bonus emission</div></article>
+          <article class="metric-card"><div class="metric-label">Pending Credit Back</div><div class="metric-value" id="creditsPendingBack">0</div><div class="metric-foot">Potential future Credits</div></article>
         </div>
-        <div class="two-col"><article class="panel"><div class="panel-head"><div><h3>New emissions by source</h3><p>Only categories that create new Credits.</p></div></div><div class="horizontal-bars" id="creditSourceBars"></div></article><article class="panel"><div class="panel-head"><div><h3>Credit flow definitions</h3></div></div><div class="info-stack"><div><b>Crate Bonus</b><span>5% bonus emitted after every crate purchase, USDC or Credits.</span></div><div><b>Credit Back</b><span>Credits returned when cashing out a crate that was purchased with Credits. This is tracked separately from new emissions.</span></div><div><b>Lulu / Promotional</b><span>New Credits introduced through burns or campaigns.</span></div></div></article></div>
-        <div class="filters"><input id="creditsSearch" class="control grow" placeholder="Search user or reference…"/><select id="creditsSource" class="control"><option value="all">All credit flows</option><option>Crate Bonus</option><option>Credit Back</option><option>Lulu Emission</option><option>Promotional Run</option><option>Credit Spend</option></select></div>
+        <div class="two-col"><article class="panel"><div class="panel-head"><div><h3>New emissions by source</h3><p>Only categories intentionally introducing new Credits.</p></div></div><div class="horizontal-bars" id="creditSourceBars"></div></article><article class="panel"><div class="panel-head"><div><h3>How Credits settle</h3></div></div><div class="info-stack"><div><b>Credit Back</b><span>80% of live prize FMV for Credits-funded settlement. It may be below or above entry Credits.</span></div><div><b>Vaulted prize</b><span>No fallback and no USDC outflow yet. The prize becomes pending exposure.</span></div><div><b>Physical redemption</b><span>Chosen records the actual product cost basis as USDC outflow.</span></div><div><b>365-day expiry</b><span>Unredeemed prize auto-settles in the original funding asset at 80% of live FMV.</span></div></div></article></div>
+        <div class="filters"><input id="creditsSearch" class="control grow" placeholder="Search user or reference…"/><select id="creditsSource" class="control"><option value="all">All credit flows</option><option>Crate Bonus</option><option>Credit Back</option><option>Lulu Emission</option><option>Promotional Run</option><option>Credit Spend</option><option>Expiry Credit Back</option></select></div>
         <article class="panel table-panel"><div class="table-wrap"><table><thead><tr><th>Time</th><th>User</th><th>Category</th><th>Change</th><th>Balance after</th><th>Detail</th><th>Reference</th><th>Status</th></tr></thead><tbody id="creditsTable"></tbody></table></div></article>
+
+        <div class="subsection-head"><div><h3>Pending item exposure</h3><p>Vaulted prizes are theoretical until they resolve into fallback value or a real fulfillment expense.</p></div><button class="export-btn" data-export="pending-items">Export CSV</button></div>
+        <div class="exposure-strip"><div><span>Vaulted items</span><strong id="pendingItemCount">0</strong></div><div><span>Potential Credit Back</span><strong id="pendingCreditBackExposure">0 cr</strong></div><div><span>Potential USDC fallback</span><strong id="pendingUsdcFallback">$0</strong></div><div><span>Expected fulfillment reserve</span><strong id="pendingFulfillmentReserve">$0</strong></div></div>
+        <article class="panel table-panel"><div class="table-wrap"><table><thead><tr><th>Opened</th><th>User</th><th>Item</th><th>Paid with</th><th>Entry</th><th>Prize FMV</th><th>80% fallback</th><th>Expected cost</th><th>Days left</th><th>Status</th></tr></thead><tbody id="pendingItemsTable"></tbody></table></div></article>
       </section>
 
       <section id="lulu" class="tab-panel">
-        <div class="section-intro"><div><h2>Lulu Emissions</h2><p>Track the capped burn program and its maximum possible Credits liability.</p></div><button class="export-btn" data-export="lulu">Export CSV</button></div>
+        <div class="section-intro"><div><h2>Lulu Emissions</h2><p>Track the capped burn program and maximum possible Credits emission.</p></div><button class="export-btn" data-export="lulu">Export CSV</button></div>
         <div class="lulu-hero"><div class="lulu-stat"><span>Original supply</span><strong>3,333</strong><small>Lulus</small></div><div class="lulu-stat"><span>Burned</span><strong id="luluBurned">37</strong><small>Consumed</small></div><div class="lulu-stat"><span>Remaining</span><strong id="luluRemaining">3,296</strong><small>Available to burn</small></div><div class="lulu-stat highlight"><span>Lifetime max emission</span><strong>369,963</strong><small>Credits</small></div></div>
         <div class="progress-block"><div class="progress-head"><span>Lulu supply burned</span><b id="luluProgressText">37 / 3,333</b></div><div class="progress-track"><div id="luluSupplyProgress" class="progress-fill"></div></div></div>
         <div class="metric-grid compact"><article class="metric-card"><div class="metric-label">Credits emitted</div><div class="metric-value" id="luluEmitted">4,096</div></article><article class="metric-card accent-credit"><div class="metric-label">Max remaining emission</div><div class="metric-value" id="luluMaxRemaining">365,834</div></article><article class="metric-card"><div class="metric-label">Bonus credits issued</div><div class="metric-value" id="luluBonusIssued">396</div></article><article class="metric-card"><div class="metric-label">Potential no longer issuable</div><div class="metric-value" id="luluLostPotential">33</div></article></div>
@@ -105,16 +114,22 @@
       </section>
 
       <section id="rules" class="tab-panel">
-        <div class="section-intro"><div><h2>Rules</h2><p>Human-readable treasury rules. Cards are intentionally compact so the page scans quickly.</p></div><button class="export-btn" data-export="rules">Export CSV</button></div>
+        <div class="section-intro"><div><h2>Rules</h2><p>Compact operational rules for how theoretical Credits and prizes become real treasury movement.</p></div><button class="export-btn" data-export="rules">Export CSV</button></div>
         <div class="rules-grid">
-          <article class="rule-card"><span>USDC Cashback</span><strong>80%</strong><p>Returned in USDC only when a USDC-funded crate is cashed out.</p></article>
-          <article class="rule-card"><span>Credit Back</span><strong>80%</strong><p>Returned in Credits only when a Credits-funded crate is cashed out.</p></article>
-          <article class="rule-card accent-rule"><span>Crate Bonus</span><strong>5%</strong><p>New Credits emitted on every crate, whether paid with USDC or Credits.</p></article>
-          <article class="rule-card"><span>Marketplace Fee</span><strong>1%</strong><p>Chosen records only its fee as revenue, not the full marketplace sale.</p></article>
-          <article class="rule-card"><span>Lulu Single</span><strong>100 Credits</strong><p>Per single Lulu burned.</p></article>
-          <article class="rule-card"><span>Lulu Triple</span><strong>333 Credits</strong><p>Every group of three includes a 33 Credit bonus.</p></article>
+          <article class="rule-card"><span>Credit Unit</span><strong>Non-cash</strong><p>Credits carry no guaranteed USD value.</p></article>
+          <article class="rule-card"><span>Credit Spend</span><strong>− Entry</strong><p>A Credits-funded crate removes the entry Credits.</p></article>
+          <article class="rule-card accent-rule"><span>Crate Bonus</span><strong>5%</strong><p>New Credits on every crate, USDC or Credits.</p></article>
+          <article class="rule-card"><span>Credit Back</span><strong>80% of prize FMV</strong><p>Credits-funded settlement based on outcome value.</p></article>
+          <article class="rule-card"><span>USDC Cashback</span><strong>80% of prize FMV</strong><p>USDC-funded settlement; never paid in Credits.</p></article>
+          <article class="rule-card"><span>Vaulted Item</span><strong>Pending</strong><p>No fallback or cash outflow while vaulted.</p></article>
+          <article class="rule-card"><span>Physical Redemption</span><strong>Actual cost basis</strong><p>Real acquisition cost becomes USDC outflow.</p></article>
+          <article class="rule-card"><span>365-Day Expiry</span><strong>Auto fallback</strong><p>80% of live FMV in original funding asset.</p></article>
+          <article class="rule-card"><span>Shipping</span><strong>Separate</strong><p>User payment in; carrier/handling cost out.</p></article>
+          <article class="rule-card"><span>Marketplace Fee</span><strong>1%</strong><p>Only Chosen's fee is company revenue.</p></article>
+          <article class="rule-card"><span>Lulu Single</span><strong>100 Credits</strong><p>Per Lulu burned.</p></article>
+          <article class="rule-card"><span>Lulu Triple</span><strong>333 Credits</strong><p>Every three includes a 33 Credit bonus.</p></article>
         </div>
-        <div class="rule-note"><b>Important:</b> Cashback, Credit Back, and Crate Bonus are three different metrics. Cashback is USDC outflow. Credit Back is Credits returned after a Credits-funded cashout. Crate Bonus is a 5% new-credit emission.</div>
+        <div class="rule-note"><b>Accounting boundary:</b> a vaulted prize can have FMV, fallback exposure and expected cost basis without any USDC moving. USDC outflow is realized only when the item is physically redeemed; expiry instead settles in the original funding asset.</div>
         <article class="panel table-panel"><div class="panel-head"><div><h3>Rule change history</h3><p>Every production change should be attributable and auditable.</p></div></div><div class="table-wrap"><table><thead><tr><th>Time</th><th>Rule</th><th>Old</th><th>New</th><th>Changed by</th><th>Reason</th></tr></thead><tbody id="rulesTable"></tbody></table></div></article>
       </section>
     </main>
