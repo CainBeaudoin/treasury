@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Chosen Treasury</title>
+  <style>html,body{margin:0;background:#07090b;color:#f5f7f9;font-family:Inter,system-ui,sans-serif}.loading{min-height:100vh;display:grid;place-items:center;color:#8793a1;font-size:14px}</style>
+</head>
+<body>
+  <div class="loading">Loading Chosen Treasury…</div>
+  <script>
+    (async function () {
+      const version = '20260912-3';
+      const response = await fetch('/index.html?base=' + version, { cache: 'no-store' });
+      if (!response.ok) throw new Error('Could not load treasury base: ' + response.status);
+      let html = await response.text();
+      const policy = '<scr' + 'ipt src="/policy-overrides.js?v=' + version + '"></scr' + 'ipt>';
+      const fixes = '<scr' + 'ipt src="/policy-fixes.js?v=' + version + '"></scr' + 'ipt>';
+      if (!html.includes('policy-overrides.js')) html = html.replace('</body>', policy + '\n' + fixes + '\n</body>');
+      else if (!html.includes('policy-fixes.js')) html = html.replace('</body>', fixes + '\n</body>');
+      document.open();
+      document.write(html);
+      document.close();
+    })().catch(function (error) {
+      document.body.innerHTML = '<div class="loading">Treasury failed to load: ' + String(error.message || error) + '</div>';
+    });
+  </script>
+</body>
+</html>
