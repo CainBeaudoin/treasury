@@ -39,8 +39,8 @@
 
     document.querySelectorAll('#rules .rule-card').forEach(card => {
       const label = card.querySelector('span')?.textContent.trim();
-      if (label === '365-Day Fallback' || label === '365-Day Expiry') {
-        card.innerHTML = '<span>Auto Credit Back</span><strong>Day 365 · Credits</strong><p>If the item is still unresolved, it is removed from the vault and automatically settles in Credits at 70% × min(initial FMV, live FMV). The original payment method does not matter.</p>';
+      if (label === '365-Day Fallback' || label === '365-Day Expiry' || label === '365-Day Window') {
+        card.innerHTML = '<span>365-Day Window</span><strong>Auto Credit Back</strong><p>During the 365-day window, the user can list, redeem, or liquidate. At day 365, if the item is still unresolved, it is removed from the vault and automatically settled in Credits at 70% × min(initial FMV, live FMV).</p>';
       }
     });
 
