@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Chosen Treasury admin demo — USDC, Credits, Lulu emissions, reconciliation and rules." />
+  <title>Chosen Treasury</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand-wrap">
+        <div class="brand-mark">C</div>
+        <div>
+          <div class="brand">Chosen</div>
+          <div class="subbrand">Treasury</div>
+        </div>
+      </div>
+      <div class="top-actions">
+        <div class="live-pill"><span class="pulse"></span><span id="liveText">Live demo</span></div>
+        <button class="ghost-btn" id="refreshBtn" title="Refresh demo data">↻ Refresh</button>
+      </div>
+    </header>
+
+    <main class="main">
+      <section class="page-head">
+        <div>
+          <div class="eyebrow">FINANCIAL OPERATIONS</div>
+          <h1>Company Treasury</h1>
+          <p>Track assets, liabilities, emissions and system health without mixing USDC and Credits.</p>
+        </div>
+        <div class="as-of-card">
+          <span>Last update</span>
+          <strong id="lastUpdated">—</strong>
+          <small>Auto-refreshing demo feed</small>
+        </div>
+      </section>
+
+      <nav class="tabs" aria-label="Treasury sections">
+        <button class="tab active" data-tab="overview">Overview</button>
+        <button class="tab" data-tab="ledger">Ledger</button>
+        <button class="tab" data-tab="reconciliation">Reconciliation</button>
+        <button class="tab" data-tab="credits">Credits</button>
+        <button class="tab" data-tab="lulu">Lulu</button>
+        <button class="tab" data-tab="rules">Rules</button>
+      </nav>
+
+      <section id="overview" class="tab-panel active">
+        <div class="section-intro">
+          <div><h2>Overview</h2><p>What we have, what users own, and whether the treasury is healthy.</p></div>
+          <div class="action-row">
+            <select id="overviewPeriod" class="control"><option>Q3 2026</option><option>Q2 2026</option><option>YTD 2026</option><option>All time</option></select>
+            <button class="export-btn" data-export="overview">Export CSV</button>
+          </div>
+        </div>
+
+        <div class="metric-grid overview-metrics">
+          <article class="metric-card accent-usdc"><div class="metric-label">Treasury USDC</div><div class="metric-value" id="metricTreasuryUsdc">$128,440.22</div><div class="metric-foot positive">↑ 8.4% this quarter</div></article>
+          <article class="metric-card"><div class="metric-label">USDC liabilities</div><div class="metric-value" id="metricUsdcLiability">$31,280.40</div><div class="metric-foot">User balances + pending cashback</div></article>
+          <article class="metric-card accent-credit"><div class="metric-label">Credits outstanding</div><div class="metric-value" id="metricCreditsOutstanding">84,920</div><div class="metric-foot positive">↓ 4.1% vs. last month</div></article>
+          <article class="metric-card"><div class="metric-label">Available USDC</div><div class="metric-value" id="metricAvailableUsdc">$97,159.82</div><div class="metric-foot">Treasury less liabilities</div></article>
+        </div>
+
+        <div class="health-strip">
+          <div class="health-title">Treasury health</div>
+          <div class="health-item ok"><span></span>USDC wallet healthy</div>
+          <div class="health-item ok"><span></span>Credits ledger healthy</div>
+          <div class="health-item warn"><span></span>1 reconciliation mismatch</div>
+          <div class="health-item ok"><span></span>0 stuck transactions</div>
+        </div>
+
+        <div class="two-col">
+          <article class="panel chart-panel">
+            <div class="panel-head"><div><h3>Net treasury position</h3><p>Quarterly USDC assets versus liabilities.</p></div><div class="legend"><span class="dot usdc"></span>Assets <span class="dot liability"></span>Liabilities</div></div>
+            <div class="bar-chart" id="treasuryChart"></div>
+          </article>
+          <article class="panel">
+            <div class="panel-head"><div><h3>Liability mix</h3><p>Economic obligations across Chosen.</p></div></div>
+            <div class="mix-list">
+              <div class="mix-row"><div><strong>USDC user balances</strong><span>On-platform redeemable balance</span></div><b>$24,608.18</b></div>
+              <div class="mix-row"><div><strong>Pending USDC cashback</strong><span>Confirmed purchases, unsettled cashback</span></div><b>$6,672.22</b></div>
+              <div class="mix-row"><div><strong>Credits outstanding</strong><span>Internal platform units held by users</span></div><b>84,920 cr</b></div>
+              <div class="mix-row"><div><strong>Lulu remaining potential</strong><span>Max future emissions from remaining supply</span></div><b id="overviewLuluRemaining">365,834 cr</b></div>
+            </div>
+          </article>
+        </div>
+
+        <article class="panel table-panel">
+          <div class="panel-head"><div><h3>Recent treasury movements</h3><p>A simple, human-readable feed of the latest value movements.</p></div></div>
+          <div class="table-wrap"><table><thead><tr><th>Time</th><th>Event</th><th>Asset</th><th>In</th><th>Out</th><th>Net</th><th>Status</th></tr></thead><tbody id="overviewTable"></tbody></table></div>
+        </article>
+      </section>
+
+      <section id="ledger" class="tab-panel">
+        <div class="section-intro">
+          <div><h2>Treasury Ledger</h2><p>Every movement of value, with payment and cashback assets shown separately.</p></div>
+          <button class="export-btn" data-export="ledger">Export CSV</button>
+        </div>
+        <div class="rule-callout"><b>Core invariant:</b> USDC crate → USDC cashback only. Credit crate → Credit cashback only. The ledger flags any invalid pair.</div>
+        <div class="filters">
+          <input id="ledgerSearch" class="control grow" placeholder="Search user, ID or event…" />
+          <select id="ledgerAsset" class="control"><option value="all">All assets</option><option>USDC</option><option>Credits</option><option>Lulu</option></select>
+          <select id="ledgerType" class="control"><option value="all">All types</option><option>Crate purchase</option><option>Cashback</option><option>Lulu burn</option><option>Credit spend</option><option>Adjustment</option></select>
+          <select id="ledgerStatus" class="control"><option value="all">All statuses</option><option>Confirmed</option><option>Pending</option><option>Failed</option></select>
+        </div>
+        <div class="metric-grid compact">
+          <article class="metric-card"><div class="metric-label">USDC in today</div><div class="metric-value">$12,680.00</div></article>
+          <article class="metric-card"><div class="metric-label">USDC cashback today</div><div class="metric-value">$8,914.20</div></article>
+          <article class="metric-card"><div class="metric-label">Credits spent today</div><div class="metric-value">9,800</div></article>
+          <article class="metric-card"><div class="metric-label">Credits cashback today</div><div class="metric-value">6,940</div></article>
+        </div>
+        <article class="panel table-panel">
+          <div class="table-wrap"><table><thead><tr><th>Time</th><th>Event</th><th>Paid with</th><th>Amount</th><th>Cashback</th><th>Cashback asset</th><th>User</th><th>Correlation ID</th><th>Status</th></tr></thead><tbody id="ledgerTable"></tbody></table></div>
+        </article>
+      </section>
+
+      <section id="reconciliation" class="tab-panel">
+        <div class="section-intro">
+          <div><h2>Reconciliation</h2><p>Compare Chosen's internal ledger with the actual source of truth and surface mismatches.</p></div>
+          <button class="export-btn" data-export="reconciliation">Export CSV</button>
+        </div>
+        <div class="metric-grid compact">
+          <article class="metric-card"><div class="metric-label">Wallets checked</div><div class="metric-value">27</div><div class="metric-foot">Latest run</div></article>
+          <article class="metric-card"><div class="metric-label">Mismatches</div><div class="metric-value warning">1</div><div class="metric-foot">Needs review</div></article>
+          <article class="metric-card"><div class="metric-label">Stuck</div><div class="metric-value">0</div><div class="metric-foot positive">All clear</div></article>
+          <article class="metric-card"><div class="metric-label">Last run</div><div class="metric-value small-value">2.1s</div><div class="metric-foot">Completed successfully</div></article>
+        </div>
+        <div class="filters">
+          <select id="reconSeverity" class="control"><option value="all">All severity</option><option>High</option><option>Medium</option><option>Info</option></select>
+          <select id="reconStatus" class="control"><option value="all">All results</option><option>Mismatch</option><option>Matched</option></select>
+          <input id="reconSearch" class="control grow" placeholder="Search wallet, user, transaction…" />
+        </div>
+        <article class="panel table-panel">
+          <div class="table-wrap"><table><thead><tr><th>Checked at</th><th>Scope</th><th>Internal</th><th>Observed</th><th>Difference</th><th>Severity</th><th>Result</th><th>Reference</th></tr></thead><tbody id="reconTable"></tbody></table></div>
+        </article>
+      </section>
+
+      <section id="credits" class="tab-panel">
+        <div class="section-intro">
+          <div><h2>Credits</h2><p>Internal credit supply, sources, usage and user-level audit trail.</p></div>
+          <button class="export-btn" data-export="credits">Export CSV</button>
+        </div>
+        <div class="metric-grid compact">
+          <article class="metric-card accent-credit"><div class="metric-label">Outstanding</div><div class="metric-value">84,920</div><div class="metric-foot">Held by users</div></article>
+          <article class="metric-card"><div class="metric-label">Issued lifetime</div><div class="metric-value">418,606</div><div class="metric-foot">All sources</div></article>
+          <article class="metric-card"><div class="metric-label">Spent lifetime</div><div class="metric-value">333,686</div><div class="metric-foot">Crates + adjustments</div></article>
+          <article class="metric-card"><div class="metric-label">Lulu-issued</div><div class="metric-value" id="creditsLuluIssued">4,096</div><div class="metric-foot">Tracked separately</div></article>
+        </div>
+        <div class="two-col">
+          <article class="panel"><div class="panel-head"><div><h3>Credits by source</h3><p>Know exactly why credits entered circulation.</p></div></div><div class="horizontal-bars" id="creditSourceBars"></div></article>
+          <article class="panel"><div class="panel-head"><div><h3>Accounting principle</h3><p>Credits are not the same thing as USDC.</p></div></div><div class="info-stack"><div><b>Credits outstanding</b><span>Platform units currently held by users.</span></div><div><b>Credits issued</b><span>Lifetime gross issuance from cashback, Lulu, promos and adjustments.</span></div><div><b>Credits spent</b><span>Credits removed from user balances when used for crates or other platform activity.</span></div></div></article>
+        </div>
+        <div class="filters">
+          <input id="creditSearch" class="control grow" placeholder="Search user or reference…" />
+          <select id="creditSource" class="control"><option value="all">All sources</option><option>Lulu burn</option><option>Crate cashback</option><option>Promo</option><option>Manual adjustment</option><option>Crate spend</option></select>
+        </div>
+        <article class="panel table-panel"><div class="table-wrap"><table><thead><tr><th>Time</th><th>User</th><th>Source</th><th>Change</th><th>Balance after</th><th>Reference</th><th>Status</th></tr></thead><tbody id="creditTable"></tbody></table></div></article>
+      </section>
+
+      <section id="lulu" class="tab-panel">
+        <div class="section-intro">
+          <div><h2>Lulu Emissions</h2><p>Track the capped NFT burn program and its maximum remaining credit liability.</p></div>
+          <button class="export-btn" data-export="lulu">Export CSV</button>
+        </div>
+        <div class="lulu-hero">
+          <div class="lulu-stat"><span>Original supply</span><strong>3,333</strong><small>Lulus</small></div>
+          <div class="lulu-stat"><span>Burned</span><strong id="luluBurned">37</strong><small>1.11% of supply</small></div>
+          <div class="lulu-stat"><span>Remaining</span><strong id="luluRemaining">3,296</strong><small>Available to burn</small></div>
+          <div class="lulu-stat highlight"><span>Lifetime max emission</span><strong>369,963</strong><small>Credits</small></div>
+        </div>
+        <div class="progress-block">
+          <div class="progress-head"><span>Lulu supply burned</span><b id="luluProgressText">37 / 3,333</b></div><div class="progress-track"><div id="luluSupplyProgress" class="progress-fill"></div></div>
+        </div>
+        <div class="metric-grid compact">
+          <article class="metric-card"><div class="metric-label">Credits emitted</div><div class="metric-value" id="luluEmitted">4,096</div><div class="metric-foot">Actual historical issuance</div></article>
+          <article class="metric-card accent-credit"><div class="metric-label">Max remaining emission</div><div class="metric-value" id="luluMaxRemaining">365,834</div><div class="metric-foot">Optimized grouping of remaining Lulus</div></article>
+          <article class="metric-card"><div class="metric-label">Bonus credits issued</div><div class="metric-value" id="luluBonusIssued">396</div><div class="metric-foot">33 extra per completed triple</div></article>
+          <article class="metric-card"><div class="metric-label">Potential no longer issuable</div><div class="metric-value" id="luluLostPotential">33</div><div class="metric-foot">Lifetime cap − emitted − remaining max</div></article>
+        </div>
+        <div class="formula-panel">
+          <div><span>Burn rule</span><strong>1 Lulu = 100 credits</strong></div>
+          <div><span>Triple bonus</span><strong>3 Lulus = 333 credits</strong></div>
+          <div><span>Remaining formula</span><code>floor(n ÷ 3) × 333 + (n mod 3) × 100</code></div>
+          <div><span>Example: 5 remaining</span><strong>333 + 200 = 533 credits</strong></div>
+        </div>
+        <div class="filters"><input id="luluSearch" class="control grow" placeholder="Search user, token or tx…" /><select id="luluStatus" class="control"><option value="all">All statuses</option><option>Confirmed</option><option>Pending</option><option>Failed</option></select></div>
+        <article class="panel table-panel"><div class="table-wrap"><table><thead><tr><th>Time</th><th>User</th><th>Token IDs</th><th>NFT count</th><th>Credits issued</th><th>Bonus</th><th>Tx hash</th><th>Status</th></tr></thead><tbody id="luluTable"></tbody></table></div></article>
+      </section>
+
+      <section id="rules" class="tab-panel">
+        <div class="section-intro">
+          <div><h2>Treasury Rules</h2><p>Human-readable financial rules with a permanent audit trail.</p></div>
+          <button class="export-btn" data-export="rules">Export CSV</button>
+        </div>
+        <div class="rules-grid">
+          <article class="rule-card"><div class="rule-tag">CRATES</div><h3>USDC cashback</h3><div class="rule-value">80%</div><p>Cashback from a USDC-paid crate must settle in USDC.</p><small>8000 bps</small></article>
+          <article class="rule-card"><div class="rule-tag">CRATES</div><h3>Credit cashback</h3><div class="rule-value">80%</div><p>Cashback from a Credit-paid crate must settle in Credits.</p><small>8000 bps</small></article>
+          <article class="rule-card"><div class="rule-tag">LULU</div><h3>Single burn</h3><div class="rule-value">100 cr</div><p>Each individual Lulu burn earns 100 Credits.</p><small>Fixed emission rule</small></article>
+          <article class="rule-card"><div class="rule-tag">LULU</div><h3>Triple burn</h3><div class="rule-value">333 cr</div><p>Each complete group of three earns a 33 Credit bonus.</p><small>11% bonus over base</small></article>
+        </div>
+        <div class="rules-grid secondary">
+          <article class="rule-card simple"><h3>Market fee</h3><div class="rule-value">0%</div><small>0 bps</small></article>
+          <article class="rule-card simple"><h3>Purchase fee</h3><div class="rule-value">0%</div><small>0 bps</small></article>
+          <article class="rule-card simple"><h3>Lulu supply cap</h3><div class="rule-value">3,333</div><small>Immutable program cap</small></article>
+          <article class="rule-card simple"><h3>Lulu max credits</h3><div class="rule-value">369,963</div><small>Absolute lifetime maximum</small></article>
+        </div>
+        <article class="panel table-panel"><div class="panel-head"><div><h3>Rule change history</h3><p>Every configuration change should identify who changed it, what changed and why.</p></div></div><div class="table-wrap"><table><thead><tr><th>Time</th><th>Rule</th><th>Previous</th><th>New</th><th>Changed by</th><th>Reason</th></tr></thead><tbody id="rulesTable"></tbody></table></div></article>
+      </section>
+    </main>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <script src="./app.js"></script>
+</body>
+</html>
