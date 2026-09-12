@@ -1,6 +1,6 @@
 # Chosen Treasury Demo
 
-Static treasury/admin demo for Chosen. The dashboard intentionally separates real USDC cash movement from the Credits economy and tracks the point where a theoretical prize can become a real cash cost.
+Static treasury/admin demo for Chosen. The dashboard separates real USDC cash movement from the Credits economy, tracks when theoretical prize value becomes a real cash cost, and now includes dedicated views for Pool Revenue and Supplier Payouts.
 
 ## Core accounting model
 
@@ -18,12 +18,32 @@ Static treasury/admin demo for Chosen. The dashboard intentionally separates rea
   - expected physical fulfillment cost basis
   - days remaining in the 365-day claim window
 - The liquidation formula is market-protected: if the market rises above the original reveal value, the original FMV remains the ceiling; if the market falls, the lower live FMV is used.
-- During the 365-day window, a user can list the item, physically redeem it, or use the liquidation option.
+- During the 365-day window, the user can list the item, physically redeem it, or use the liquidation option.
 - If the user physically redeems the item, Chosen records the **actual item cost basis** as USDC outflow. This is the point where theoretical value becomes a real cash expense.
-- If the item is still unresolved when the 365-day window ends, the claim automatically closes and the fallback is issued in **Credits only**, regardless of whether the original crate was purchased with USDC or Credits.
-- The 365-day auto fallback uses the same capped basis: `70% × min(initial prize FMV, live FMV at expiry)`, denominated in Credits. This avoids creating a forced USDC liquidity event after the user has had a full year to list, redeem, or liquidate the item.
+- If the item is still unresolved when the 365-day window ends, the user no longer has a choice. The item is removed from the vault and Chosen executes an **Auto Credit Back** in Credits.
+- **Auto Credit Back** is always paid in Credits, even if the original crate was purchased with USDC. The amount is `70% × min(initial prize FMV, live FMV at expiry)`. The settlement is written into Credits Activity so an inactive user can return later and find the Credits in their account.
+- Auto Credit Back is a settlement event, not a USDC payout. This avoids creating a forced liquidity drain after the user had a full year to list, redeem, or liquidate the item.
 - Shipping is split into shipping collected (inflow) and carrier/handling cost (outflow).
 - Marketplace sales do not count as company revenue; only Chosen's fee is recorded as revenue.
+
+## Treasury tabs
+
+- **Overview** — USDC position, obligations, Credits, pending prize exposure, and recent activity.
+- **Activity** — separate USDC and Credits logs.
+- **Reconciliation** — internal records versus wallets and other sources of truth.
+- **Credits** — Credit Spend, Credit Back, Crate Bonus, promotions, Lulu emissions, Auto Credit Back, and pending item exposure.
+- **Lulu** — burn supply and maximum Credit emissions.
+- **Pool Revenue** — gross source volume versus actual revenue allocated to the company pool, with source filters and CSV export.
+- **Supplier Payouts** — supplier-level cost basis, paid/pending/awaiting-invoice amounts, due dates, claim references, and CSV export.
+- **Rules** — compact operating rules and rule-change history.
+
+## Supplier accounting
+
+When a physical prize is redeemed, the prize's actual acquisition cost can be tied to a supplier payout. Supplier Payouts are real USDC costs and should reconcile to fulfillment-related USDC outflows rather than the prize's displayed FMV.
+
+## Pool Revenue accounting
+
+Pool Revenue should represent Chosen's actual allocated revenue, not the gross transaction value that generated it. For example, on a marketplace sale, the sale value is shown as source volume while only Chosen's fee share is counted as Pool Revenue.
 
 ## Lulu program
 
@@ -35,8 +55,8 @@ Static treasury/admin demo for Chosen. The dashboard intentionally separates rea
 
 ## Demo behavior
 
-The page uses in-memory demo data and simulates new activity every 15 seconds. `policy-overrides.js` applies the current pending-item and 365-day fallback policy on top of the demo state. Replace the in-memory arrays with production API responses and use WebSocket/SSE events for live updates.
+The page uses in-memory demo data and simulates new activity every 15 seconds. `policy-overrides.js` applies the current pending-item, Auto Credit Back, Pool Revenue, and Supplier Payout policies on top of the demo state. Replace the in-memory arrays with production API responses and use WebSocket/SSE events for live updates.
 
 ## Deploy
 
-The project is Vercel-ready. The root route injects the current treasury policy override into the static dashboard so the latest rules and calculations are reflected without mixing USDC and Credits.
+The project is Vercel-ready. The root route injects the current treasury policy override into the static dashboard so the latest rules, tabs, and calculations are reflected without mixing USDC and Credits.
