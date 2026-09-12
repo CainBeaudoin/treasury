@@ -10,7 +10,7 @@
   <div class="loading">Loading Chosen Treasury…</div>
   <script>
     (async function () {
-      const version = '20260912-6';
+      const version = '20260912-7';
       const response = await fetch('/index.html?base=' + version, { cache: 'no-store' });
       if (!response.ok) throw new Error('Could not load treasury base: ' + response.status);
       let html = await response.text();
