@@ -1,291 +1,210 @@
-/* Final treasury display fixes layered after policy-overrides.js. */
+/* Live treasury structure + finance model. This file is loaded directly by index.html. */
 (function () {
-  function projectedAutoCreditBack() {
-    return state.pendingItems
-      .filter(item => item.status === 'Vaulted')
-      .reduce((sum, item) => sum + pendingLiquidationAmount(item), 0);
+  const ODTO_COST_RATE = 0.70;
+  const CAD_USD = 0.72;
+  const CASHBACK_RESERVE = 8000;
+  const OPERATING_BUFFER = 2500;
+
+  const catalog = [
+    {item:'Air Jordan 3 Black Cement (2024)',brand:'JORDAN',itemNo:'P1413',listCad:380,qty:18,status:'Paid',due:'2026-09-06',ref:'odto_q3_001',description:'Black tumbled-leather Jordan 3 with grey elephant-print overlays, Fire Red tongue branding and visible Air cushioning.'},
+    {item:'Yeezy Slide Onyx',brand:'YEEZY',itemNo:'P2426',listCad:350,qty:22,status:'Paid',due:'2026-09-07',ref:'odto_q3_002',description:'Onyx-black lightweight EVA slide with a soft footbed and grooved outsole.'},
+    {item:'Air Jordan 11 Cherry',brand:'JORDAN',itemNo:'P879',listCad:420,qty:12,status:'Paid',due:'2026-09-08',ref:'odto_q3_003',description:'White mesh Jordan 11 with cherry-red patent-leather mudguard, red Jumpman branding and translucent outsole.'},
+    {item:'Nike Air Force 1 Low Supreme White',brand:'NIKE',itemNo:'P684',listCad:350,qty:10,status:'Paid',due:'2026-09-09',ref:'odto_q3_004',description:'Monochrome white Air Force 1 with Supreme red box-logo branding and alternate branded laces.'},
+    {item:'Air Jordan 4 Nigel Sylvester Brick by Brick',brand:'JORDAN',itemNo:'P1887',listCad:855,qty:6,status:'Paid',due:'2026-09-10',ref:'odto_q3_005',description:'Firewood-orange Jordan 4 from Nigel Sylvester’s Bike Air series with BMX-inspired branding and sail/red tooling.'},
+    {item:'Air Jordan 1 High Off-White University Blue',brand:'JORDAN',itemNo:'P533',listCad:2800,qty:2,status:'Pending',due:'2026-09-16',ref:'odto_q3_006',description:'Deconstructed Off-White Jordan 1 in University Blue with exposed construction details, printed branding and zip tie.'},
+    {item:'Nike Air Force 1 Low Off-White Volt',brand:'NIKE',itemNo:'P1360',listCad:1600,qty:3,status:'Awaiting Invoice',due:'2026-09-20',ref:'odto_q3_007',description:'Volt Off-White Air Force 1 with synthetic mesh, suede overlays, oversized black Swoosh and printed AIR details.'},
+    {item:'Nike Air Force 1 Low Off-White Black',brand:'NIKE',itemNo:'P1358',listCad:600,qty:5,status:'Pending',due:'2026-09-18',ref:'odto_q3_008',description:'Black Off-White Air Force 1 with mesh and suede construction, oversized white Swoosh and collaborative medial branding.'}
+  ];
+
+  catalog.forEach(x => {
+    x.unitCostCad = x.listCad * ODTO_COST_RATE;
+    x.unitCostUsdc = x.unitCostCad * CAD_USD;
+    x.totalUsdc = x.unitCostUsdc * x.qty;
+  });
+
+  state.odtoCatalog = catalog;
+  state.supplierPayouts = catalog.map((x,i) => [
+    `2026-09-${String(Math.min(12,5+i)).padStart(2,'0')} 12:${String(10+i*4).padStart(2,'0')}:00`,
+    'ODTO',x.item,`Q3 batch · ${x.qty} units`,x.totalUsdc,'USDC',x.status,x.due,x.ref,
+    x.listCad,x.unitCostCad,x.qty,x.description,x.itemNo,x.unitCostUsdc
+  ]);
+
+  state.poolRevenue = [
+    ['2026-07-31 23:59:00','Crate Margin',48000,0.30,14400,'USDC','q3_jul_crates','Confirmed'],
+    ['2026-07-31 23:59:01','Marketplace Fees',80000,0.01,800,'USDC','q3_jul_market','Confirmed'],
+    ['2026-07-31 23:59:02','Shipping Margin',5000,0.12,600,'USDC','q3_jul_ship','Confirmed'],
+    ['2026-07-31 23:59:03','Partner Revenue Share',20000,0.05,1000,'USDC','q3_jul_partner','Confirmed'],
+    ['2026-08-31 23:59:00','Crate Margin',52000,0.30,15600,'USDC','q3_aug_crates','Confirmed'],
+    ['2026-08-31 23:59:01','Marketplace Fees',90000,0.01,900,'USDC','q3_aug_market','Confirmed'],
+    ['2026-08-31 23:59:02','Shipping Margin',6000,0.12,720,'USDC','q3_aug_ship','Confirmed'],
+    ['2026-08-31 23:59:03','Partner Revenue Share',24000,0.05,1200,'USDC','q3_aug_partner','Confirmed'],
+    ['2026-09-12 14:00:00','Crate Margin',50000,0.30,15000,'USDC','q3_sep_crates','Confirmed'],
+    ['2026-09-12 14:00:01','Marketplace Fees',80000,0.01,800,'USDC','q3_sep_market','Confirmed'],
+    ['2026-09-12 14:00:02','Shipping Margin',7000,0.12,840,'USDC','q3_sep_ship','Confirmed'],
+    ['2026-09-12 14:00:03','Partner Revenue Share',28000,0.05,1400,'USDC','q3_sep_partner','Confirmed']
+  ];
+
+  const num = v => Number(v || 0);
+  const usd = v => money(num(v));
+  const cad = v => 'C$' + num(v).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+
+  function totals(){
+    const earnedRevenue = state.poolRevenue.reduce((a,r)=>a+num(r[4]),0);
+    const grossSource = state.poolRevenue.reduce((a,r)=>a+num(r[2]),0);
+    const supplierPaid = state.supplierPayouts.filter(r=>r[6]==='Paid').reduce((a,r)=>a+num(r[4]),0);
+    const supplierPending = state.supplierPayouts.filter(r=>r[6]==='Pending').reduce((a,r)=>a+num(r[4]),0);
+    const supplierAwaiting = state.supplierPayouts.filter(r=>r[6]==='Awaiting Invoice').reduce((a,r)=>a+num(r[4]),0);
+    const supplierOpen = supplierPending + supplierAwaiting;
+    const fulfillmentReserve = typeof pendingReserve === 'function' ? pendingReserve() : 0;
+    const requiredReserve = CASHBACK_RESERVE + supplierOpen + fulfillmentReserve + OPERATING_BUFFER;
+    const withdrawableProfit = Math.max(0, earnedRevenue - supplierPaid - requiredReserve);
+    return {earnedRevenue,grossSource,supplierPaid,supplierOpen,fulfillmentReserve,requiredReserve,withdrawableProfit};
   }
 
-  function bindFinanceTab(button, panelId) {
-    if (!button || button.dataset.financeTabBound) return;
-    button.dataset.financeTabBound = 'true';
-    button.addEventListener('click', () => {
-      document.querySelectorAll('.tab,.tab-panel').forEach(x => x.classList.remove('active'));
+  function addStyles(){
+    if(document.getElementById('liveTreasuryFixStyles')) return;
+    const s=document.createElement('style');
+    s.id='liveTreasuryFixStyles';
+    s.textContent=`
+      .finance-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:14px}.finance-kpis .metric-card{min-height:0}.finance-kpis .metric-value{font-size:22px}
+      .finance-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:14px 0}.finance-breakdown{width:100%;border-collapse:collapse}.finance-breakdown th,.finance-breakdown td{padding:10px 0;border-bottom:1px solid var(--border);font-size:11px}.finance-breakdown th{text-align:left;color:var(--muted);background:transparent}.finance-breakdown td:last-child,.finance-breakdown th:last-child{text-align:right}
+      .supplier-source-note{margin:0 0 14px;padding:11px 13px;border:1px solid rgba(60,150,255,.3);background:rgba(60,150,255,.06);border-radius:11px;font-size:11px;line-height:1.5;color:#b9c7d6}.supplier-source-note b{color:var(--blue)}
+      .product-desc{max-width:360px;white-space:normal;line-height:1.4;color:var(--muted);font-size:11px}
+      .overview-profit-strip{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin:12px 0 20px}.overview-profit-strip>div{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;display:grid;gap:5px;min-width:0}.overview-profit-strip span{font-size:10px;color:var(--muted)}.overview-profit-strip strong{font-size:18px}.overview-profit-strip .highlight{box-shadow:inset 0 2px 0 var(--blue)}.overview-profit-strip .highlight strong{color:var(--blue)}
+      @media(max-width:1200px){.overview-profit-strip{grid-template-columns:repeat(3,1fr)}.finance-kpis{grid-template-columns:repeat(2,1fr)}}@media(max-width:760px){.overview-profit-strip,.finance-grid,.finance-kpis{grid-template-columns:1fr}}
+    `;
+    document.head.appendChild(s);
+  }
+
+  function ensurePanels(){
+    const main=document.querySelector('main.main');
+    const activity=document.getElementById('activity');
+    if(!main||!activity) return;
+    if(!document.getElementById('poolRevenue')){
+      const p=document.createElement('section');p.id='poolRevenue';p.className='tab-panel';main.insertBefore(p,activity);
+    }
+    if(!document.getElementById('supplierPayouts')){
+      const p=document.createElement('section');p.id='supplierPayouts';p.className='tab-panel';main.insertBefore(p,activity);
+    }
+  }
+
+  function bindTab(button,id){
+    if(button.dataset.liveBound) return;
+    button.dataset.liveBound='1';
+    button.addEventListener('click',()=>{
+      document.querySelectorAll('.tab,.tab-panel').forEach(x=>x.classList.remove('active'));
       button.classList.add('active');
-      document.getElementById(panelId)?.classList.add('active');
-      if (panelId === 'poolRevenue') renderFinancePages();
-      if (panelId === 'supplierPayouts') renderFinancePages();
+      document.getElementById(id)?.classList.add('active');
+      renderFinance();
     });
   }
 
-  function ensureFinanceTabsVisible() {
-    const nav = document.querySelector('.tabs');
-    if (!nav) return;
-
-    const activityTab = [...nav.querySelectorAll('.tab')].find(b => b.dataset.tab === 'activity');
-    const specs = [
-      ['poolRevenue', 'Pool Revenue'],
-      ['supplierPayouts', 'Supplier Payouts']
-    ];
-
-    const buttons = specs.map(([panelId, label]) => {
-      if (!document.getElementById(panelId)) return null;
-      let button = [...nav.querySelectorAll('.tab')].find(b => b.dataset.tab === panelId);
-      if (!button) {
-        button = document.createElement('button');
-        button.className = 'tab';
-        button.dataset.tab = panelId;
-        button.textContent = label;
-      }
-      bindFinanceTab(button, panelId);
-      return button;
-    }).filter(Boolean);
-
-    // Finance pages belong immediately after Overview and before Activity.
-    buttons.forEach(button => nav.insertBefore(button, activityTab || null));
+  function syncNavigation(){
+    const nav=document.querySelector('.tabs');
+    if(!nav) return;
+    const order=[['overview','Overview'],['activity','Activity'],['poolRevenue','Revenue Pool'],['supplierPayouts','Supplier Payouts'],['credits','Credits'],['reconciliation','Reconciliation'],['lulu','Lulu'],['rules','Rules']];
+    order.forEach(([id,label])=>{
+      let b=[...nav.querySelectorAll('.tab')].find(x=>x.dataset.tab===id);
+      if(!b){b=document.createElement('button');b.className='tab';b.dataset.tab=id;}
+      b.textContent=label;bindTab(b,id);nav.appendChild(b);
+    });
   }
 
-  function ensureFinancePageStyles() {
-    if (document.getElementById('financePageStyles')) return;
-    const style = document.createElement('style');
-    style.id = 'financePageStyles';
-    style.textContent = `
-      .finance-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:14px}
-      .finance-kpis .metric-card{min-height:0}
-      .finance-kpis .metric-value{font-size:23px}
-      .finance-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:14px 0}
-      .finance-breakdown{width:100%;border-collapse:collapse;min-width:0}
-      .finance-breakdown th,.finance-breakdown td{padding:10px 0;border-bottom:1px solid var(--border);font-size:11px}
-      .finance-breakdown th{text-align:left;background:transparent;color:var(--muted);text-transform:none;letter-spacing:0}
-      .finance-breakdown td:last-child,.finance-breakdown th:last-child{text-align:right}
-      .finance-note{font-size:11px;color:var(--muted);line-height:1.45;margin-top:8px}
-      @media(max-width:1100px){.finance-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.finance-grid{grid-template-columns:1fr}}
-      @media(max-width:720px){.finance-kpis{grid-template-columns:1fr}}
-    `;
-    document.head.appendChild(style);
-  }
-
-  function setupPoolRevenuePage() {
-    const panel = document.getElementById('poolRevenue');
-    if (!panel || panel.dataset.expandedFinancePage) return;
-    panel.dataset.expandedFinancePage = 'true';
-    panel.innerHTML = `
-      <div class="section-intro">
-        <div><h2>Pool Revenue</h2><p>Quarterly revenue flowing into Chosen, where it came from, and how much remains after realized supplier payouts.</p></div>
-        <button class="export-btn" id="exportPoolRevenue">Export CSV</button>
-      </div>
+  function setupRevenuePage(){
+    const p=document.getElementById('poolRevenue');if(!p) return;
+    p.innerHTML=`
+      <div class="section-intro"><div><h2>Revenue Pool</h2><p>Quarterly earned revenue, reserves, supplier obligations and the amount that can safely be distributed as profit.</p></div><button class="export-btn" id="exportRevenuePool">Export CSV</button></div>
       <div class="finance-kpis">
-        <article class="metric-card accent-usdc"><div class="metric-label">Quarterly pool revenue</div><div class="metric-value" id="poolRevenueTotal">$0</div><div class="metric-foot">Actual Chosen revenue allocated this quarter</div></article>
-        <article class="metric-card"><div class="metric-label">Gross source volume</div><div class="metric-value" id="poolGrossVolume">$0</div><div class="metric-foot">Underlying transaction volume</div></article>
-        <article class="metric-card"><div class="metric-label">Marketplace fee revenue</div><div class="metric-value" id="poolMarketplaceRevenue">$0</div><div class="metric-foot">Chosen fee share only</div></article>
-        <article class="metric-card"><div class="metric-label">Supplier cash paid</div><div class="metric-value" id="poolSupplierPaid">$0</div><div class="metric-foot">Real supplier USDC outflow this quarter</div></article>
-        <article class="metric-card"><div class="metric-label">Net after supplier payouts</div><div class="metric-value" id="poolNetAfterSuppliers">$0</div><div class="metric-foot">Pool revenue less paid supplier outflow</div></article>
+        <article class="metric-card"><div class="metric-label">Gross source volume</div><div class="metric-value" id="rpGross">$0</div><div class="metric-foot">Underlying Q3 activity</div></article>
+        <article class="metric-card accent-usdc"><div class="metric-label">Q3 earned revenue</div><div class="metric-value" id="rpEarned">$0</div><div class="metric-foot">Chosen margin and fees earned</div></article>
+        <article class="metric-card"><div class="metric-label">Supplier cash paid</div><div class="metric-value" id="rpPaid">$0</div><div class="metric-foot">Realized ODTO outflow</div></article>
+        <article class="metric-card"><div class="metric-label">Required reserve</div><div class="metric-value" id="rpReserve">$0</div><div class="metric-foot">Cashback + AP + claims + buffer</div></article>
+        <article class="metric-card accent-usdc"><div class="metric-label">Withdrawable profit</div><div class="metric-value" id="rpWithdrawable">$0</div><div class="metric-foot">Safe Q3 distribution after reserves</div></article>
       </div>
       <div class="finance-grid">
-        <article class="panel"><div class="panel-head"><div><h3>Quarterly revenue breakdown</h3><p>Only Chosen's earned/allocated amount counts as revenue.</p></div></div><table class="finance-breakdown"><thead><tr><th>Source</th><th>Gross volume</th><th>Revenue</th></tr></thead><tbody id="poolSourceSummary"></tbody></table><div class="finance-note">Gross marketplace sale value is not company revenue. Only Chosen's fee share is counted here.</div></article>
-        <article class="panel"><div class="panel-head"><div><h3>Quarterly cash bridge</h3><p>How revenue compares with realized supplier cash outflow.</p></div></div><table class="finance-breakdown"><tbody id="poolCashBridge"></tbody></table></article>
+        <article class="panel"><div class="panel-head"><div><h3>Revenue by source</h3><p>Gross volume is context; only earned margin enters the pool.</p></div></div><table class="finance-breakdown"><thead><tr><th>Source</th><th>Gross</th><th>Earned</th></tr></thead><tbody id="rpSources"></tbody></table></article>
+        <article class="panel"><div class="panel-head"><div><h3>Profit waterfall</h3><p>Cash that must stay before profit can be removed.</p></div></div><table class="finance-breakdown"><tbody id="rpWaterfall"></tbody></table></article>
       </div>
-      <div class="filters">
-        <input id="poolSearch" class="control grow" placeholder="Search source or reference…" />
-        <select id="poolSource" class="control"><option value="all">All sources</option><option>Marketplace Fee Share</option><option>Crate Margin Allocation</option><option>Partner Revenue Share</option></select>
-        <select id="poolStatus" class="control"><option value="all">All statuses</option><option>Confirmed</option><option>Pending</option></select>
-      </div>
-      <article class="panel table-panel"><div class="panel-head"><div><h3>Revenue activity</h3><p>Audit trail backing the quarterly pool revenue total.</p></div></div><div class="table-wrap"><table><thead><tr><th>Time</th><th>Source</th><th>Gross volume</th><th>Rate</th><th>Pool revenue</th><th>Asset</th><th>Reference</th><th>Status</th></tr></thead><tbody id="poolRevenueTable"></tbody></table></div></article>
-    `;
-    document.getElementById('poolSearch')?.addEventListener('input', renderFinancePages);
-    document.getElementById('poolSource')?.addEventListener('change', renderFinancePages);
-    document.getElementById('poolStatus')?.addEventListener('change', renderFinancePages);
-    document.getElementById('exportPoolRevenue')?.addEventListener('click', () => exportSection('pool-revenue'));
+      <article class="panel table-panel"><div class="panel-head"><div><h3>Quarterly revenue activity</h3><p>Audit trail backing the pool.</p></div></div><div class="table-wrap"><table><thead><tr><th>Time</th><th>Source</th><th>Gross volume</th><th>Rate</th><th>Earned revenue</th><th>Reference</th></tr></thead><tbody id="rpTable"></tbody></table></div></article>`;
+    document.getElementById('exportRevenuePool')?.addEventListener('click',()=>exportSection('pool-revenue'));
   }
 
-  function setupSupplierPayoutPage() {
-    const panel = document.getElementById('supplierPayouts');
-    if (!panel || panel.dataset.expandedFinancePage) return;
-    panel.dataset.expandedFinancePage = 'true';
-    panel.innerHTML = `
-      <div class="section-intro">
-        <div><h2>Supplier Payouts</h2><p>Quarterly supplier spend, outstanding obligations, and the exact item-level cost basis behind physical fulfillment.</p></div>
-        <button class="export-btn" id="exportSupplierPayouts">Export CSV</button>
-      </div>
+  function setupSupplierPage(){
+    const p=document.getElementById('supplierPayouts');if(!p) return;
+    p.innerHTML=`
+      <div class="section-intro"><div><h2>Supplier Payouts</h2><p>ODTO inventory cost basis. Supplier payout is modeled at 70% of ODTO listed CAD price.</p></div><button class="export-btn" id="exportSupplierLive">Export CSV</button></div>
+      <div class="supplier-source-note"><b>Supplier basis:</b> ODTO list price × 70%. USDC-equivalent payout uses the demo treasury rate of 1 CAD = 0.72 USD.</div>
       <div class="finance-kpis">
-        <article class="metric-card accent-usdc"><div class="metric-label">Paid this quarter</div><div class="metric-value" id="supplierPaidTotal">$0</div><div class="metric-foot">Completed supplier USDC outflow</div></article>
-        <article class="metric-card"><div class="metric-label">Pending approved</div><div class="metric-value" id="supplierPendingTotal">$0</div><div class="metric-foot">Approved but not paid</div></article>
-        <article class="metric-card"><div class="metric-label">Awaiting invoice</div><div class="metric-value" id="supplierInvoiceTotal">$0</div><div class="metric-foot">Expected AP exposure</div></article>
-        <article class="metric-card"><div class="metric-label">Total committed</div><div class="metric-value" id="supplierCommittedTotal">$0</div><div class="metric-foot">Paid + pending + awaiting invoice</div></article>
-        <article class="metric-card"><div class="metric-label">Active suppliers</div><div class="metric-value" id="supplierCount">0</div><div class="metric-foot">Suppliers represented this quarter</div></article>
+        <article class="metric-card"><div class="metric-label">ODTO retail value</div><div class="metric-value" id="spRetail">C$0</div></article>
+        <article class="metric-card"><div class="metric-label">70% contract value</div><div class="metric-value" id="spContract">C$0</div></article>
+        <article class="metric-card accent-usdc"><div class="metric-label">Paid this quarter</div><div class="metric-value" id="spPaid">$0</div></article>
+        <article class="metric-card"><div class="metric-label">Open supplier AP</div><div class="metric-value" id="spOpen">$0</div></article>
+        <article class="metric-card"><div class="metric-label">Product lines</div><div class="metric-value" id="spSkus">0</div></article>
       </div>
-      <div class="finance-grid">
-        <article class="panel"><div class="panel-head"><div><h3>Spend by supplier</h3><p>Cost basis grouped by supplier and payment status.</p></div></div><table class="finance-breakdown"><thead><tr><th>Supplier</th><th>Paid</th><th>Open AP</th><th>Total</th></tr></thead><tbody id="supplierSummary"></tbody></table></article>
-        <article class="panel"><div class="panel-head"><div><h3>Supplier accounting</h3><p>How these amounts flow into the main dashboard.</p></div></div><div class="info-stack"><div><b>Paid</b><span>Real USDC outflow and reflected in treasury cash movement.</span></div><div><b>Pending</b><span>Approved accounts payable exposure; not yet a completed cash movement.</span></div><div><b>Awaiting invoice</b><span>Expected cost basis waiting for invoice confirmation.</span></div><div><b>Prize FMV</b><span>Not used as supplier cost. Supplier payout is based on Chosen's actual acquisition cost.</span></div></div></article>
-      </div>
-      <div class="filters">
-        <input id="supplierSearch" class="control grow" placeholder="Search supplier, item, claim or payout ref…" />
-        <select id="supplierStatus" class="control"><option value="all">All statuses</option><option>Paid</option><option>Pending</option><option>Awaiting Invoice</option></select>
-      </div>
-      <article class="panel table-panel"><div class="panel-head"><div><h3>Supplier payout activity</h3><p>Item-level ledger backing supplier spend and accounts payable.</p></div></div><div class="table-wrap"><table><thead><tr><th>Time</th><th>Supplier</th><th>Item</th><th>Claim</th><th>Cost basis</th><th>Asset</th><th>Status</th><th>Due</th><th>Payout ref</th></tr></thead><tbody id="supplierPayoutTable"></tbody></table></div></article>
-    `;
-    document.getElementById('supplierSearch')?.addEventListener('input', renderFinancePages);
-    document.getElementById('supplierStatus')?.addEventListener('change', renderFinancePages);
-    document.getElementById('exportSupplierPayouts')?.addEventListener('click', () => exportSection('supplier-payouts'));
+      <article class="panel table-panel"><div class="panel-head"><div><h3>ODTO supplier payout activity</h3><p>List price, 70% supplier basis, quantity and payout status.</p></div></div><div class="table-wrap"><table><thead><tr><th>Product</th><th>ODTO item</th><th>List CAD</th><th>70% cost CAD</th><th>Qty</th><th>Unit USDC</th><th>Total payout</th><th>Status</th><th>Description</th></tr></thead><tbody id="spTable"></tbody></table></div></article>`;
+    document.getElementById('exportSupplierLive')?.addEventListener('click',()=>exportSection('supplier-payouts'));
   }
 
-  function renderFinancePages() {
-    const poolRows = state.poolRevenue || [];
-    const supplierRows = state.supplierPayouts || [];
-
-    const poolQuery = (document.getElementById('poolSearch')?.value || '').toLowerCase();
-    const poolSource = document.getElementById('poolSource')?.value || 'all';
-    const poolStatus = document.getElementById('poolStatus')?.value || 'all';
-    const filteredPool = poolRows.filter(r =>
-      (poolSource === 'all' || r[1] === poolSource) &&
-      (poolStatus === 'all' || r[7] === poolStatus) &&
-      (!poolQuery || r.join(' ').toLowerCase().includes(poolQuery))
-    );
-
-    const gross = poolRows.reduce((a,r)=>a+Number(r[2] || 0),0);
-    const revenue = poolRows.reduce((a,r)=>a+Number(r[4] || 0),0);
-    const marketRevenue = poolRows.filter(r=>r[1]==='Marketplace Fee Share').reduce((a,r)=>a+Number(r[4] || 0),0);
-    const supplierPaid = supplierRows.filter(r=>r[6]==='Paid').reduce((a,r)=>a+Number(r[4] || 0),0);
-    const netAfterSuppliers = revenue - supplierPaid;
-
-    setText('poolGrossVolume', money(gross));
-    setText('poolRevenueTotal', money(revenue));
-    setText('poolMarketplaceRevenue', money(marketRevenue));
-    setText('poolSupplierPaid', money(supplierPaid));
-    setText('poolNetAfterSuppliers', money(netAfterSuppliers));
-    const netEl = document.getElementById('poolNetAfterSuppliers');
-    if (netEl) netEl.className = 'metric-value ' + (netAfterSuppliers >= 0 ? 'positive-text' : 'negative-text');
-
-    const sourceNames = [...new Set(poolRows.map(r=>r[1]))];
-    const sourceSummary = document.getElementById('poolSourceSummary');
-    if (sourceSummary) sourceSummary.innerHTML = sourceNames.map(name => {
-      const rows = poolRows.filter(r=>r[1]===name);
-      const sourceGross = rows.reduce((a,r)=>a+Number(r[2] || 0),0);
-      const sourceRevenue = rows.reduce((a,r)=>a+Number(r[4] || 0),0);
-      return `<tr><td>${name}</td><td>${money(sourceGross)}</td><td>${money(sourceRevenue)}</td></tr>`;
-    }).join('');
-
-    const bridge = document.getElementById('poolCashBridge');
-    if (bridge) bridge.innerHTML = `
-      <tr><td>Quarterly pool revenue</td><td class="positive-text">+${money(revenue)}</td></tr>
-      <tr><td>Paid supplier outflow</td><td class="negative-text">−${money(supplierPaid)}</td></tr>
-      <tr><td><b>Net after supplier payouts</b></td><td class="${netAfterSuppliers >= 0 ? 'positive-text' : 'negative-text'}"><b>${netAfterSuppliers >= 0 ? '+' : '−'}${money(Math.abs(netAfterSuppliers))}</b></td></tr>`;
-
-    const poolBody = document.getElementById('poolRevenueTable');
-    if (poolBody) poolBody.innerHTML = filteredPool.map(r => `<tr><td class="mono">${r[0]}</td><td>${r[1]}</td><td>${money(r[2])}</td><td>${(Number(r[3])*100).toFixed(Number(r[3])*100<10?1:0)}%</td><td class="positive-text">+${money(r[4])}</td><td>${badge(r[5])}</td><td class="mono">${r[6]}</td><td>${badge(r[7])}</td></tr>`).join('');
-
-    const supplierQuery = (document.getElementById('supplierSearch')?.value || '').toLowerCase();
-    const supplierStatus = document.getElementById('supplierStatus')?.value || 'all';
-    const filteredSuppliers = supplierRows.filter(r =>
-      (supplierStatus === 'all' || r[6] === supplierStatus) &&
-      (!supplierQuery || r.join(' ').toLowerCase().includes(supplierQuery))
-    );
-    const paid = supplierPaid;
-    const pending = supplierRows.filter(r=>r[6]==='Pending').reduce((a,r)=>a+Number(r[4] || 0),0);
-    const awaiting = supplierRows.filter(r=>r[6]==='Awaiting Invoice').reduce((a,r)=>a+Number(r[4] || 0),0);
-    const committed = paid + pending + awaiting;
-    const supplierNames = [...new Set(supplierRows.map(r=>r[1]))];
-
-    setText('supplierPaidTotal', money(paid));
-    setText('supplierPendingTotal', money(pending));
-    setText('supplierInvoiceTotal', money(awaiting));
-    setText('supplierCommittedTotal', money(committed));
-    setText('supplierCount', supplierNames.length.toLocaleString());
-
-    const supplierSummary = document.getElementById('supplierSummary');
-    if (supplierSummary) supplierSummary.innerHTML = supplierNames.map(name => {
-      const rows = supplierRows.filter(r=>r[1]===name);
-      const sPaid = rows.filter(r=>r[6]==='Paid').reduce((a,r)=>a+Number(r[4] || 0),0);
-      const sOpen = rows.filter(r=>r[6]!=='Paid').reduce((a,r)=>a+Number(r[4] || 0),0);
-      return `<tr><td>${name}</td><td>${money(sPaid)}</td><td>${money(sOpen)}</td><td>${money(sPaid+sOpen)}</td></tr>`;
-    }).join('');
-
-    const supplierBody = document.getElementById('supplierPayoutTable');
-    if (supplierBody) supplierBody.innerHTML = filteredSuppliers.map(r => `<tr><td class="mono">${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td class="mono">${r[3]}</td><td class="negative-text">−${money(r[4])}</td><td>${badge(r[5])}</td><td>${badge(r[6])}</td><td class="mono">${r[7]}</td><td class="mono">${r[8]}</td></tr>`).join('');
+  function setupOverview(){
+    const o=document.getElementById('overview');if(!o) return;
+    const intro=o.querySelector('.section-intro p');if(intro) intro.textContent='Executive view of treasury cash, quarterly revenue, supplier obligations, reserves and distributable profit.';
+    const metrics=o.querySelector('.overview-metrics');if(!metrics) return;
+    let strip=document.getElementById('overviewProfitStrip');if(!strip){strip=document.createElement('div');strip.id='overviewProfitStrip';metrics.insertAdjacentElement('afterend',strip);}
+    strip.className='overview-profit-strip';
+    strip.innerHTML=`
+      <div class="highlight"><span>Q3 earned revenue</span><strong id="ovRevenue">$0</strong></div>
+      <div><span>Supplier paid</span><strong id="ovPaid">$0</strong></div>
+      <div><span>Supplier open AP</span><strong id="ovOpen">$0</strong></div>
+      <div><span>Total supplier committed</span><strong id="ovCommitted">$0</strong></div>
+      <div><span>Required reserve</span><strong id="ovReserve">$0</strong></div>
+      <div class="highlight"><span>Withdrawable Q3 profit</span><strong id="ovProfit">$0</strong></div>`;
   }
 
-  function syncRules() {
-    const grid = document.querySelector('#rules .rules-grid');
-    if (!grid) return;
-
-    const rules = [
-      ['Credits','Non-cash units','Credits have no direct cash value in treasury reporting. They only affect real cash when a physical claim or other USDC settlement creates a real obligation.'],
-      ['Credit Spend','Entry removed','A Credits-funded crate immediately removes the crate entry amount from the user’s Credit balance.'],
-      ['Immediate Credit Back','80% of prize FMV','For a Credits-funded prize settled immediately, the user receives Credits equal to 80% of the prize FMV. It is based on outcome value, not crate entry.'],
-      ['USDC Cashback','80% of prize FMV','For a USDC-funded prize settled immediately, the user receives 80% of the prize FMV in USDC. No Credits are paid for that immediate settlement.'],
-      ['Crate Bonus','5% of entry','Every crate emits a separate bonus equal to 5% of crate entry value, whether the crate was funded with USDC or Credits.'],
-      ['Vaulted Item','365-day claim window','A vaulted prize does not immediately trigger Credit Back or a USDC outflow. The user can list, physically redeem, or liquidate it during the 365-day window.'],
-      ['Pending Liquidation','70% capped','During the 365-day window, liquidation is 70% × min(initial prize FMV, current live FMV). Upside is capped at reveal FMV; downside follows the market.'],
-      ['Liquidation Asset','Original settlement asset','During the 365-day window, Credits-funded vaults liquidate to Credits and USDC-funded vaults liquidate to USDC.'],
-      ['365-Day Window','Auto Credit Back','At day 365, if the item is still unresolved, the user loses the choice to redeem or liquidate. The item is removed from the vault and automatically settled into Credits.'],
-      ['Auto Credit Back','70% capped · Credits','The day-365 settlement is always Credits, regardless of original payment method, using 70% × min(initial FMV, live FMV at expiry).'],
-      ['After Auto Credit Back','Credits remain available','If the user is inactive, the Credits remain in the account. They can return later and use those Credits to open or reroll into another crate.'],
-      ['Physical Redemption','Actual acquisition cost','When a user redeems physically, Chosen records the actual amount paid to source the item as USDC outflow—not the displayed prize FMV.'],
-      ['Shipping','Separate cash flows','Shipping charged to the user is a USDC inflow. Carrier, handling, and fulfillment costs are separate USDC outflows.'],
-      ['Marketplace','Only the fee is revenue','Marketplace sale principal is not Chosen revenue. Only Chosen’s marketplace fee is recorded as company revenue. Demo fee: 1%.'],
-      ['Supplier Payout','Actual cost basis','Paid supplier payouts are real USDC outflows tied to fulfillment cost basis. Pending or awaiting-invoice amounts are accounts-payable exposure, not completed cash movement.'],
-      ['Pool Revenue','Allocated revenue only','Pool Revenue records Chosen’s actual allocated revenue, not the gross transaction value that generated it.'],
+  function syncRules(){
+    const grid=document.querySelector('#rules .rules-grid');if(!grid) return;
+    const rules=[
+      ['Credits','Non-cash units','Credits have no direct cash value in treasury reporting.'],
+      ['Credit Spend','Entry removed','A Credits-funded crate immediately removes the crate entry amount.'],
+      ['Immediate Credit Back','80% of prize FMV','Credits-funded immediate settlement is based on prize FMV, not entry.'],
+      ['USDC Cashback','80% of prize FMV','USDC-funded immediate settlement is paid in USDC.'],
+      ['Crate Bonus','5% of entry','Every crate emits a separate 5% Credit bonus.'],
+      ['Vaulted Item','365-day window','The user can list, redeem or liquidate during the claim window.'],
+      ['Pending Liquidation','70% capped','70% × min(initial prize FMV, current live FMV).'],
+      ['Liquidation Asset','Original asset','Within 365 days, Credits-funded vaults liquidate to Credits and USDC-funded vaults to USDC.'],
+      ['Auto Credit Back','Day 365 · Credits','If unresolved at day 365, the item disappears and automatically settles in Credits at the capped 70% basis.'],
+      ['After Auto Credit Back','Credits remain','Credits stay in the user account and can later be rerolled into another crate.'],
+      ['Physical Redemption','Actual acquisition cost','Supplier/acquisition cost, not retail FMV, becomes the USDC outflow.'],
+      ['Supplier Cost','70% of ODTO list','Demo supplier basis uses 70% of ODTO listed CAD price.'],
+      ['Revenue Pool','Profit after reserves','Withdrawable profit is earned revenue less paid suppliers and required liquidity reserves.'],
+      ['Marketplace','Fee only','Marketplace sale principal is not company revenue; only Chosen’s fee is revenue.'],
+      ['Shipping','Separate cash flows','User shipping payment is inflow; carrier/handling is outflow.'],
       ['Lulu Single','100 Credits','Each Lulu burned emits 100 Credits.'],
-      ['Lulu Triple','333 Credits','Every three Lulus burned emit 333 Credits total, including the 33-Credit triple bonus.']
+      ['Lulu Triple','333 Credits','Every three Lulus burned emit 333 Credits total.']
     ];
-
-    grid.innerHTML = rules.map((r, i) =>
-      `<article class="rule-card${i === 8 || i === 9 ? ' accent-rule' : ''}"><span>${r[0]}</span><strong>${r[1]}</strong><p>${r[2]}</p></article>`
-    ).join('');
-
-    const note = document.querySelector('#rules .rule-note');
-    if (note) note.innerHTML = '<b>Accounting boundary:</b> Credits are non-cash platform units. Vaulted prizes are pending exposure, not realized cash outflows. Real USDC leaves treasury for USDC cashback, physical acquisition/fulfillment, shipping costs, and paid supplier obligations. Unresolved vaults automatically close at day 365 through Auto Credit Back in Credits.';
+    grid.innerHTML=rules.map((r,i)=>`<article class="rule-card${i===8?' accent-rule':''}"><span>${r[0]}</span><strong>${r[1]}</strong><p>${r[2]}</p></article>`).join('');
+    const note=document.querySelector('#rules .rule-note');if(note) note.innerHTML='<b>Accounting boundary:</b> Credits remain non-cash. Revenue Pool is the quarterly earned amount after supplier cash costs and reserves. At day 365 unresolved vault items automatically convert to Credits at 70% × min(initial FMV, live FMV).';
   }
 
-  function syncAutoCreditBackUi() {
-    const projected = projectedAutoCreditBack();
-    setText('pendingCreditMetric', credits(projected));
-    setText('creditsPendingBack', credits(projected));
-
-    const creditsMetric = document.getElementById('creditsPendingBack')?.closest('.metric-card');
-    if (creditsMetric) {
-      creditsMetric.querySelector('.metric-label').textContent = 'Projected Auto Credit Back';
-      creditsMetric.querySelector('.metric-foot').textContent = 'Credits if every current vault reaches day 365 unresolved';
-    }
-
-    const activityMetric = document.getElementById('pendingCreditMetric')?.closest('.metric-card');
-    if (activityMetric) {
-      activityMetric.querySelector('.metric-label').textContent = 'Projected Auto Credit Back';
-      activityMetric.querySelector('.metric-foot').textContent = 'All unresolved vaulted items settle to Credits at day 365';
-    }
-
-    const exposureStrip = document.querySelector('#credits .exposure-strip');
-    if (exposureStrip) {
-      let value = document.getElementById('autoCreditBackExposure');
-      if (!value) {
-        const card = document.createElement('div');
-        card.innerHTML = '<span>Projected Auto Credit Back</span><strong id="autoCreditBackExposure">0 cr</strong>';
-        exposureStrip.insertBefore(card, exposureStrip.lastElementChild || null);
-        value = document.getElementById('autoCreditBackExposure');
-      }
-      setText('autoCreditBackExposure', credits(projected) + ' cr');
-    }
-
-    const pendingHead = [...document.querySelectorAll('#credits .subsection-head h3')]
-      .find(el => el.textContent.trim() === 'Pending item exposure');
-    if (pendingHead) {
-      const p = pendingHead.parentElement?.querySelector('p');
-      if (p) p.textContent = 'The user has 365 days to list, redeem, or liquidate. If they do nothing, the item disappears from the vault at day 365 and Auto Credit Back deposits the capped 70% amount into Credits.';
-    }
-
-    ensureFinancePageStyles();
-    ensureFinanceTabsVisible();
-    setupPoolRevenuePage();
-    setupSupplierPayoutPage();
-    renderFinancePages();
-    syncRules();
+  function renderFinance(){
+    const t=totals();
+    setText('rpGross',usd(t.grossSource));setText('rpEarned',usd(t.earnedRevenue));setText('rpPaid',usd(t.supplierPaid));setText('rpReserve',usd(t.requiredReserve));setText('rpWithdrawable',usd(t.withdrawableProfit));
+    setText('ovRevenue',usd(t.earnedRevenue));setText('ovPaid',usd(t.supplierPaid));setText('ovOpen',usd(t.supplierOpen));setText('ovCommitted',usd(t.supplierPaid+t.supplierOpen));setText('ovReserve',usd(t.requiredReserve));setText('ovProfit',usd(t.withdrawableProfit));
+    const by={};state.poolRevenue.forEach(r=>{const k=r[1];by[k]=by[k]||{g:0,e:0};by[k].g+=num(r[2]);by[k].e+=num(r[4]);});
+    const src=document.getElementById('rpSources');if(src) src.innerHTML=Object.entries(by).map(([k,v])=>`<tr><td>${k}</td><td>${usd(v.g)}</td><td>${usd(v.e)}</td></tr>`).join('');
+    const wf=document.getElementById('rpWaterfall');if(wf) wf.innerHTML=`<tr><td>Q3 earned revenue</td><td>+${usd(t.earnedRevenue)}</td></tr><tr><td>Supplier payouts paid</td><td>−${usd(t.supplierPaid)}</td></tr><tr><td>Open supplier AP reserve</td><td>−${usd(t.supplierOpen)}</td></tr><tr><td>Cashback reserve</td><td>−${usd(CASHBACK_RESERVE)}</td></tr><tr><td>Pending claim reserve</td><td>−${usd(t.fulfillmentReserve)}</td></tr><tr><td>Operating buffer</td><td>−${usd(OPERATING_BUFFER)}</td></tr><tr><td><b>Withdrawable Q3 profit</b></td><td><b>${usd(t.withdrawableProfit)}</b></td></tr>`;
+    const rt=document.getElementById('rpTable');if(rt) rt.innerHTML=state.poolRevenue.map(r=>`<tr><td class="mono">${r[0]}</td><td>${r[1]}</td><td>${usd(r[2])}</td><td>${(num(r[3])*100).toFixed(1)}%</td><td>+${usd(r[4])}</td><td class="mono">${r[6]}</td></tr>`).join('');
+    const retail=catalog.reduce((a,x)=>a+x.listCad*x.qty,0),contract=catalog.reduce((a,x)=>a+x.unitCostCad*x.qty,0);
+    setText('spRetail',cad(retail));setText('spContract',cad(contract));setText('spPaid',usd(t.supplierPaid));setText('spOpen',usd(t.supplierOpen));setText('spSkus',String(catalog.length));
+    const st=document.getElementById('spTable');if(st) st.innerHTML=catalog.map(x=>`<tr><td><b>${esc(x.item)}</b><small class="table-sub">${x.brand}</small></td><td class="mono">${x.itemNo}</td><td>${cad(x.listCad)}</td><td>${cad(x.unitCostCad)}</td><td>${x.qty}</td><td>${usd(x.unitCostUsdc)}</td><td>−${usd(x.totalUsdc)}</td><td>${badge(x.status)}</td><td class="product-desc">${esc(x.description)}</td></tr>`).join('');
+    setText('pendingCreditMetric',credits(state.pendingItems.filter(x=>x.status==='Vaulted').reduce((a,x)=>a+pendingLiquidationAmount(x),0)));
+    setText('creditsPendingBack',credits(state.pendingItems.filter(x=>x.status==='Vaulted').reduce((a,x)=>a+pendingLiquidationAmount(x),0)));
   }
 
-  const baseRenderAll = renderAll;
-  renderAll = function () {
-    baseRenderAll();
-    syncAutoCreditBackUi();
-  };
+  function initialize(){
+    addStyles();ensurePanels();syncNavigation();setupRevenuePage();setupSupplierPage();setupOverview();syncRules();renderFinance();
+  }
 
-  renderAll();
+  const priorRenderAll=renderAll;
+  renderAll=function(){priorRenderAll();initialize();};
+  initialize();
 })();
