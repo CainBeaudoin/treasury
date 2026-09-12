@@ -214,18 +214,32 @@
 
   renderAll();
 
-  function loadVisualHierarchy() {
-    if (document.querySelector('script[data-visual-hierarchy]')) return;
+  function loadTreasuryAudit() {
+    if (document.querySelector('script[data-treasury-audit]')) return;
     const script = document.createElement('script');
-    script.src = './visual-hierarchy.js?v=20260912-10';
+    script.src = './treasury-audit.js?v=20260912-11';
+    script.dataset.treasuryAudit = '1';
+    document.body.appendChild(script);
+  }
+
+  function loadVisualHierarchy() {
+    const existing = document.querySelector('script[data-visual-hierarchy]');
+    if (existing) {
+      if (document.body.dataset.visualHierarchy) loadTreasuryAudit();
+      else existing.addEventListener('load', loadTreasuryAudit, { once: true });
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = './visual-hierarchy.js?v=20260912-11';
     script.dataset.visualHierarchy = '1';
+    script.addEventListener('load', loadTreasuryAudit, { once: true });
     document.body.appendChild(script);
   }
 
   const existingInventory = document.querySelector('script[data-odto-inventory]');
   if (!existingInventory) {
     const script = document.createElement('script');
-    script.src = './inventory-odto.js?v=20260912-10';
+    script.src = './inventory-odto.js?v=20260912-11';
     script.dataset.odtoInventory = '1';
     script.addEventListener('load', loadVisualHierarchy, { once: true });
     document.body.appendChild(script);
